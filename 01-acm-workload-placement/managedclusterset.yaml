@@ -1,0 +1,7 @@
+# managedclusterset.yaml
+# Purpose: Groups managed clusters into a logical set for placement decisions.
+# Only clusters in this set will be considered when ACM evaluates Placement rules.
+apiVersion: cluster.open-cluster-management.io/v1beta2
+kind: ManagedClusterSet
+metadata:
+  name: production-clusters

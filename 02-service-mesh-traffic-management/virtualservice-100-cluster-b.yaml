@@ -1,0 +1,19 @@
+# virtualservice-100-cluster-b.yaml
+# Purpose: Routes 100% of traffic to cluster-b (post-migration).
+# Apply this after ACM has placed the workload on cluster-b to complete the blue-green switch.
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: demo-app-routing
+  namespace: demo-app
+  labels:
+    app.kubernetes.io/part-of: demo-app
+spec:
+  hosts:
+    - demo-app.demo-app.global
+  http:
+    - route:
+        - destination:
+            host: demo-app.demo-app.global
+            subset: cluster-b
+          weight: 100

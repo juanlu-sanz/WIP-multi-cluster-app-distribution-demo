@@ -1,0 +1,23 @@
+# destination-rule.yaml
+# Purpose: Defines cluster-specific subsets for traffic routing.
+# The VirtualService references these subsets (cluster-a, cluster-b) to control
+# which cluster receives what percentage of traffic.
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: demo-app-dr
+  namespace: demo-app
+  labels:
+    app.kubernetes.io/part-of: demo-app
+spec:
+  host: demo-app.demo-app.global
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+  subsets:
+    - name: cluster-a
+      labels:
+        cluster: local
+    - name: cluster-b
+      labels:
+        cluster: remote
