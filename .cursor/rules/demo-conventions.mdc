@@ -1,0 +1,60 @@
+---
+description: Conventions and decisions for the multi-cluster app distribution demo
+globs: "**/*.md,**/*.yaml"
+alwaysApply: false
+---
+
+# Demo Conventions
+
+## Repository Purpose
+
+This is a demo for multi-cluster application distribution using ACM and Service Mesh. It is never uploaded to GitHub and must never contain customer or user names.
+
+## Structure
+
+- `00-current-state/` simulates the current manual deployment problem (step zero)
+- `01-acm-workload-placement/` solves placement with ACM
+- `02-service-mesh-traffic-management/` adds Service Mesh for networking and failover
+- Steps are progressive: each builds on the previous one
+
+## README Formatting
+
+- Every numbered step must have a **What** and **Why** bullet point pair:
+  ```
+  - **What:** One sentence describing the concrete action.
+  - **Why:** One sentence explaining why this step matters.
+  ```
+- Every step must have a foldable verification block using `<details>` / `<summary>` with a ✅ checkmark:
+  ```
+  <details>
+  <summary>✅ Verify: Description of what to check</summary>
+  ...commands and expected output...
+  </details>
+  ```
+- Do not use em dashes (`—`). Use regular dashes (`-`) instead
+- Horizontal rules (`---`) are fine and encouraged between steps
+- YAML files live directly in each step folder alongside `README.md`, no `manifests/` subfolder
+- All doc links must point to `docs.redhat.com` or `docs.openshift.com`, no placeholders
+
+## CLI Conventions
+
+- Every `oc` command in the READMEs must include an explicit `--context` flag (`hub`, `cluster-a`, or `cluster-b`)
+- Never use `oc login` inside step READMEs; context setup is done once in the top-level README's Cluster Setup section
+- Hub-targeted commands use `--context hub`; managed cluster commands use `--context cluster-a` or `--context cluster-b`
+- YAML files that contain `${VARIABLE}` placeholders must be applied via `envsubst < file.yaml | oc apply --context <ctx> -f -`
+- All workshop variables are exported once in the top-level README's Cluster Setup section; YAML files and step READMEs reference them via `${VAR}` syntax
+
+## Content Rules
+
+- Never include customer names, user names, or email addresses anywhere in the repository
+- All content must be in English
+- Prefer `registry.access.redhat.com` or `registry.redhat.io` images over Docker Hub
+- Use Red Hat / OpenShift-native components when they cover the use case (ACM, Service Mesh, GitOps, etc.)
+- Mention Red Hat products because they fit the solution, not to promote them
+
+## YAML Conventions
+
+- Every YAML file starts with a comment block: filename and purpose
+- Use `app.kubernetes.io/part-of: demo-app` label consistently
+- Include resource requests and limits on Deployments
+- Include readiness and liveness probes where applicable
