@@ -1,0 +1,37 @@
+# =============================================================================
+# Copy this file to terraform.tfvars and fill in your values.
+#   cp terraform.tfvars.example terraform.tfvars
+# =============================================================================
+
+# --- Azure credentials -------------------------------------------------------
+# Service principal needs Contributor + User Access Admin on the subscription.
+# Create one with: az ad sp create-for-rbac --name "aro-demo-sp" --role Contributor \
+#   --scopes /subscriptions/<SUBSCRIPTION_ID>
+azure_subscription_id = ""
+azure_tenant_id       = ""
+azure_client_id       = ""
+azure_client_secret   = ""
+azure_region          = "westeurope"
+
+# --- AWS credentials ---------------------------------------------------------
+# IAM user needs AdministratorAccess (or the ROSA-specific managed policies).
+aws_access_key_id     = ""
+aws_secret_access_key = ""
+aws_region            = "eu-north-1"
+
+# --- Red Hat credentials -----------------------------------------------------
+# Pull secret: https://console.redhat.com/openshift/downloads#tool-pull-secret
+# OCM token:   https://console.redhat.com/openshift/token
+pull_secret_path = "~/.openshift/pull-secret.json"
+rhcs_token       = ""
+
+# --- Cluster sizing (optional - defaults work for demos) ---------------------
+# aro_worker_count          = 3
+# aro_worker_vm_size        = "Standard_D4s_v3"
+# aro_version               = "4.15.27"
+# rosa_worker_count         = 3
+# rosa_worker_instance_type = "m5.xlarge"
+# rosa_version              = "4.15.0"
+
+# --- Naming (optional) -------------------------------------------------------
+# demo_name = "multicluster-demo"

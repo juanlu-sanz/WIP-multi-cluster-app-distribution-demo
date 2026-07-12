@@ -16,6 +16,7 @@ This is a multi-cloud (Azure + AWS) demo for multi-cluster application distribut
 - `01-acm-workload-placement/` solves placement with ACM
 - `02-submariner-connectivity/` deploys Submariner via ACM for encrypted cross-cloud (Azure to AWS) L3 connectivity
 - `03-service-mesh-traffic-management/` adds Service Mesh for networking and failover
+- `setup/` contains Terraform + post-install script for provisioning clusters (internal, not part of the demo)
 - Steps are progressive: each builds on the previous one
 
 ## README Formatting

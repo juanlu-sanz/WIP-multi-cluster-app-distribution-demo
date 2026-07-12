@@ -24,6 +24,7 @@ This demo demonstrates how to achieve seamless application mobility across multi
 | [`01-acm-workload-placement/`](./01-acm-workload-placement/) | Uses ACM to manage workload placement and migrate applications between clusters declaratively |
 | [`02-submariner-connectivity/`](./02-submariner-connectivity/) | Deploys Submariner via ACM for encrypted cross-cloud L3 connectivity between Azure and AWS |
 | [`03-service-mesh-traffic-management/`](./03-service-mesh-traffic-management/) | Uses OpenShift Service Mesh for transparent traffic routing, blue-green failover, and zero-trust networking across clusters |
+| [`setup/`](./setup/) | **(Internal)** Terraform + post-install script to provision the demo environment from scratch |
 
 ## Quick Start
 
@@ -38,9 +39,11 @@ Start with [`00-current-state/`](./00-current-state/) to understand the current 
 - Cloud provider credentials for both managed clusters (for step 02 - Submariner)
 - OpenShift Service Mesh 3.0 Operator installed on all clusters (for step 03)
 
+> **Red Hatters:** To provision the clusters from scratch, see [`setup/`](./setup/) for Terraform automation (ARO on Azure + ROSA HCP on AWS). The setup script also installs all required operators and configures the contexts below.
+
 ## Cluster Setup
 
-Before starting, log in to all three clusters, rename the contexts, and export the workshop variables. This only needs to be done once per terminal session.
+Before starting, log in to all three clusters, rename the contexts, and export the workshop variables. This only needs to be done once per terminal session. If you used [`setup/post-install.sh`](./setup/post-install.sh), the contexts and logins are already configured.
 
 ### 1. Export workshop variables
 

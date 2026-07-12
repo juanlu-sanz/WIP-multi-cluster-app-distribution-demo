@@ -1,2 +1,10 @@
 .DS_Store
 t/
+
+# Terraform
+setup/.terraform/
+setup/.terraform.lock.hcl
+setup/terraform.tfstate
+setup/terraform.tfstate.backup
+setup/terraform.tfvars
+setup/*.tfplan
