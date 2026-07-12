@@ -233,9 +233,10 @@ Expected output:
 
 | Remaining Problem | Addressed In |
 |---|---|
-| DNS/Route changes on migration | [Step 2 - Service Mesh](../02-service-mesh-traffic-management/) |
-| No gradual traffic shifting | [Step 2 - Service Mesh](../02-service-mesh-traffic-management/) |
-| Zero-trust inter-service communication | [Step 2 - Service Mesh](../02-service-mesh-traffic-management/) |
+| No network path between clouds (Azure to AWS) | [Step 2 - Submariner](../02-submariner-connectivity/) |
+| DNS/Route changes on migration | [Step 3 - Service Mesh](../03-service-mesh-traffic-management/) |
+| No gradual traffic shifting | [Step 3 - Service Mesh](../03-service-mesh-traffic-management/) |
+| Zero-trust inter-service communication | [Step 3 - Service Mesh](../03-service-mesh-traffic-management/) |
 
 ## Official Documentation
 

@@ -2,7 +2,7 @@
 
 ## Summary
 
-This demo demonstrates how to achieve seamless application mobility across multiple OpenShift clusters. It starts by reproducing the current pain point - manual, disconnected deployments that require pipeline reconfiguration for every cluster change - and then progressively introduces Red Hat Advanced Cluster Management (ACM) for declarative workload placement and OpenShift Service Mesh for transparent cross-cluster traffic management and failover.
+This demo demonstrates how to achieve seamless application mobility across multiple OpenShift clusters in a multi-cloud environment (Azure + AWS). It starts by reproducing the current pain point - manual, disconnected deployments that require pipeline reconfiguration for every cluster change - and then progressively introduces Red Hat Advanced Cluster Management (ACM) for declarative workload placement, Submariner for encrypted cross-cloud connectivity, and OpenShift Service Mesh for transparent cross-cluster traffic management and failover.
 
 ## Environment
 
@@ -10,9 +10,11 @@ This demo demonstrates how to achieve seamless application mobility across multi
 |---|---|
 | OpenShift version | 4.15+ |
 | ACM version | 2.10+ |
+| Submariner (via ACM add-on) | 0.18+ |
 | OpenShift Service Mesh | 3.0+ (Istio ambient mode) |
 | OpenShift GitOps (Argo CD) | 1.12+ |
-| Cloud provider / platform | Any (AWS, Azure, bare metal, on-premises) |
+| Hub + Cluster A | Azure (ARO or IPI) |
+| Cluster B | AWS (ROSA or IPI) |
 
 ## Repository Structure
 
@@ -20,19 +22,21 @@ This demo demonstrates how to achieve seamless application mobility across multi
 |---|---|
 | [`00-current-state/`](./00-current-state/) | Simulates the current manual deployment workflow - no cross-cluster awareness, no automated placement |
 | [`01-acm-workload-placement/`](./01-acm-workload-placement/) | Uses ACM to manage workload placement and migrate applications between clusters declaratively |
-| [`02-service-mesh-traffic-management/`](./02-service-mesh-traffic-management/) | Uses OpenShift Service Mesh for transparent traffic routing, blue-green failover, and zero-trust networking across clusters |
+| [`02-submariner-connectivity/`](./02-submariner-connectivity/) | Deploys Submariner via ACM for encrypted cross-cloud L3 connectivity between Azure and AWS |
+| [`03-service-mesh-traffic-management/`](./03-service-mesh-traffic-management/) | Uses OpenShift Service Mesh for transparent traffic routing, blue-green failover, and zero-trust networking across clusters |
 
 ## Quick Start
 
-Start with [`00-current-state/`](./00-current-state/) to understand the current problem, then proceed to [`01-acm-workload-placement/`](./01-acm-workload-placement/) to see how ACM solves the placement challenge, and finally [`02-service-mesh-traffic-management/`](./02-service-mesh-traffic-management/) to add transparent traffic management on top.
+Start with [`00-current-state/`](./00-current-state/) to understand the current problem, then proceed to [`01-acm-workload-placement/`](./01-acm-workload-placement/) to see how ACM solves the placement challenge. Next, [`02-submariner-connectivity/`](./02-submariner-connectivity/) establishes cross-cloud networking between Azure and AWS. Finally, [`03-service-mesh-traffic-management/`](./03-service-mesh-traffic-management/) adds transparent traffic management on top.
 
 ## Prerequisites
 
-- An ACM Hub cluster with at least two managed clusters joined
+- An ACM Hub cluster with at least two managed clusters joined (Hub + Cluster A on Azure, Cluster B on AWS)
 - `oc` CLI authenticated as cluster-admin on the Hub
 - Cluster admin access to both managed clusters
 - OpenShift GitOps Operator installed on the Hub (for step 01+)
-- OpenShift Service Mesh 3.0 Operator installed on all clusters (for step 02)
+- Cloud provider credentials for both managed clusters (for step 02 - Submariner)
+- OpenShift Service Mesh 3.0 Operator installed on all clusters (for step 03)
 
 ## Cluster Setup
 
@@ -52,11 +56,11 @@ export REMOTE_INGRESS_IP="10.0.0.1"
 
 | Variable | Used in | Description |
 |---|---|---|
-| `HUB_API_URL` | This README (login) | API server URL for the ACM Hub cluster |
-| `CLUSTER_A_API_URL` | This README (login) | API server URL for the first managed cluster |
-| `CLUSTER_B_API_URL` | This README (login) | API server URL for the second managed cluster |
+| `HUB_API_URL` | This README (login) | API server URL for the ACM Hub cluster (Azure) |
+| `CLUSTER_A_API_URL` | This README (login) | API server URL for the first managed cluster (Azure) |
+| `CLUSTER_B_API_URL` | This README (login) | API server URL for the second managed cluster (AWS) |
 | `GIT_ORG` | [`01-acm-workload-placement/channel.yaml`](./01-acm-workload-placement/channel.yaml) | GitHub org/user for the ACM Channel Git repository |
-| `REMOTE_INGRESS_IP` | [`02-service-mesh-traffic-management/service-entry.yaml`](./02-service-mesh-traffic-management/service-entry.yaml) | Ingress gateway IP of the peer cluster for cross-cluster mesh routing |
+| `REMOTE_INGRESS_IP` | [`03-service-mesh-traffic-management/service-entry.yaml`](./03-service-mesh-traffic-management/service-entry.yaml) | Ingress gateway IP of the peer cluster for cross-cluster mesh routing. With Submariner (Step 2), this can be an internal cluster IP reachable through the tunnel. |
 
 ### 2. Log in to each cluster
 

@@ -1,5 +1,5 @@
 ---
-description: Conventions and decisions for the multi-cluster app distribution demo
+description: Conventions and decisions for the multi-cloud (Azure + AWS) multi-cluster app distribution demo
 globs: "**/*.md,**/*.yaml"
 alwaysApply: false
 ---
@@ -8,13 +8,14 @@ alwaysApply: false
 
 ## Repository Purpose
 
-This is a demo for multi-cluster application distribution using ACM and Service Mesh. It is never uploaded to GitHub and must never contain customer or user names.
+This is a multi-cloud (Azure + AWS) demo for multi-cluster application distribution using ACM, Submariner, and Service Mesh. It is never uploaded to GitHub and must never contain customer or user names.
 
 ## Structure
 
 - `00-current-state/` simulates the current manual deployment problem (step zero)
 - `01-acm-workload-placement/` solves placement with ACM
-- `02-service-mesh-traffic-management/` adds Service Mesh for networking and failover
+- `02-submariner-connectivity/` deploys Submariner via ACM for encrypted cross-cloud (Azure to AWS) L3 connectivity
+- `03-service-mesh-traffic-management/` adds Service Mesh for networking and failover
 - Steps are progressive: each builds on the previous one
 
 ## README Formatting

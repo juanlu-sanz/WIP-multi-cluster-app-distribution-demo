@@ -1,0 +1,279 @@
+# Step 2 - Submariner: Cross-Cloud Cluster Connectivity
+
+## Summary
+
+This step deploys Submariner via ACM to establish encrypted L3 connectivity between Cluster A (Azure) and Cluster B (AWS). Submariner creates an IPsec tunnel between the clusters, enabling pods and services to communicate across cloud providers without exposing anything to the public internet. This provides the network foundation that [Step 3 (Service Mesh)](../03-service-mesh-traffic-management/) builds on for cross-cluster traffic management.
+
+## Prerequisites
+
+- ACM Hub cluster with workload placement from [Step 1](../01-acm-workload-placement/) fully operational
+- Both managed clusters (`cluster-a` and `cluster-b`) joined to the Hub and members of the `production-clusters` ManagedClusterSet
+- `oc` CLI authenticated as cluster-admin on the Hub cluster
+- Contexts renamed as described in the [Cluster Setup](../README.md#cluster-setup) section
+- Cloud provider credentials available for both managed clusters (see below)
+
+### Cloud provider credentials
+
+Submariner needs cloud credentials to configure gateway nodes and open the required firewall rules (NSGs on Azure, security groups on AWS). If ACM provisioned your clusters, these credentials already exist. If the clusters were imported manually, create them before proceeding.
+
+**Verify credentials exist:**
+
+```bash
+oc get secret cluster-a-cloud-creds -n cluster-a --context hub
+oc get secret cluster-b-cloud-creds -n cluster-b --context hub
+```
+
+If either secret is missing, create it:
+
+**Cluster A (Azure):**
+
+```bash
+oc create secret generic cluster-a-cloud-creds -n cluster-a --context hub \
+  --from-literal=osServicePrincipal.json='{
+    "clientId": "<AZURE_CLIENT_ID>",
+    "clientSecret": "<AZURE_CLIENT_SECRET>",
+    "tenantId": "<AZURE_TENANT_ID>",
+    "subscriptionId": "<AZURE_SUBSCRIPTION_ID>"
+  }'
+```
+
+**Cluster B (AWS):**
+
+```bash
+oc create secret generic cluster-b-cloud-creds -n cluster-b --context hub \
+  --from-literal=aws_access_key_id="<AWS_ACCESS_KEY_ID>" \
+  --from-literal=aws_secret_access_key="<AWS_SECRET_ACCESS_KEY>"
+```
+
+> **Note:** These credentials need permission to modify NSG rules (Azure) and security group rules (AWS). The minimum required permissions are documented in the [Submariner cloud preparation guide](https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.11/html/add-ons/submariner#preparing-selected-hosts-to-deploy-submariner).
+
+## Steps to Apply
+
+### 1. Create the Submariner broker namespace
+
+- **What:** Create the namespace where the Submariner Broker will run on the Hub.
+- **Why:** The Broker is the rendezvous point where managed clusters exchange endpoint information. ACM expects the broker namespace to follow the `<managedclusterset-name>-broker` naming convention.
+
+```bash
+oc apply -f broker-namespace.yaml --context hub
+```
+
+<details>
+<summary>✅ Verify: Broker namespace created</summary>
+
+```bash
+oc get namespace production-clusters-broker --context hub
+```
+
+Expected output:
+
+```
+NAME                          STATUS   AGE
+production-clusters-broker    Active   10s
+```
+
+</details>
+
+---
+
+### 2. Deploy the Submariner Broker
+
+- **What:** Create the Broker CR that coordinates cross-cluster discovery and tunnel establishment.
+- **Why:** The Broker stores the endpoint information that each managed cluster's gateway needs to find and connect to its peers. Without the Broker, the clusters have no way to discover each other.
+
+```bash
+oc apply -f broker.yaml --context hub
+```
+
+<details>
+<summary>✅ Verify: Broker deployed</summary>
+
+```bash
+oc get broker submariner-broker -n production-clusters-broker --context hub
+```
+
+Expected output:
+
+```
+NAME                AGE
+submariner-broker   10s
+```
+
+</details>
+
+---
+
+### 3. Create the SubmarinerConfig for each managed cluster
+
+- **What:** Create SubmarinerConfig CRs that tell ACM how to prepare each managed cluster for Submariner - including which credentials to use and how many gateway nodes to designate.
+- **Why:** Each cloud provider needs different preparation. On Azure, Submariner opens NSG rules for IPsec traffic (UDP 4500, UDP 500). On AWS, it opens security group rules for the same ports. The SubmarinerConfig also designates worker nodes as gateway nodes, which handle the encrypted tunnel endpoints.
+
+```bash
+oc apply -f submariner-config-cluster-a.yaml --context hub
+oc apply -f submariner-config-cluster-b.yaml --context hub
+```
+
+<details>
+<summary>✅ Verify: SubmarinerConfig created for both clusters</summary>
+
+```bash
+oc get submarinerconfig submariner -n cluster-a --context hub
+oc get submarinerconfig submariner -n cluster-b --context hub
+```
+
+Expected output (for each):
+
+```
+NAME          AGE
+submariner    10s
+```
+
+</details>
+
+---
+
+### 4. Deploy the Submariner add-on on each managed cluster
+
+- **What:** Create ManagedClusterAddOn resources to trigger the Submariner installation on both managed clusters.
+- **Why:** ACM manages Submariner as an add-on. Creating this resource tells ACM to install the Submariner operator, gateway engine, and route agent on the target cluster. The gateway engine establishes the IPsec tunnel to the peer cluster, and the route agent configures the host networking so pod and service CIDRs are routable across the tunnel.
+
+```bash
+oc apply -f addon-cluster-a.yaml --context hub
+oc apply -f addon-cluster-b.yaml --context hub
+```
+
+<details>
+<summary>✅ Verify: Submariner add-on installed and connected</summary>
+
+Wait 2-3 minutes for the add-on to install and the gateways to establish the tunnel.
+
+Check add-on status:
+
+```bash
+oc get managedclusteraddon submariner -n cluster-a --context hub
+oc get managedclusteraddon submariner -n cluster-b --context hub
+```
+
+Expected output (for each):
+
+```
+NAME          AVAILABLE   DEGRADED   STATUS
+submariner    True        False
+```
+
+Check the gateway connection on each cluster:
+
+```bash
+oc get gateway -n submariner-operator --context cluster-a
+```
+
+Expected output:
+
+```
+NAME                    HA STATUS   CONNECTIONS   AGE
+cluster-a-gateway-0     active      1             60s
+```
+
+```bash
+oc get gateway -n submariner-operator --context cluster-b
+```
+
+Expected output:
+
+```
+NAME                    HA STATUS   CONNECTIONS   AGE
+cluster-b-gateway-0     active      1             60s
+```
+
+The `CONNECTIONS: 1` confirms the IPsec tunnel is established between Azure and AWS.
+
+</details>
+
+---
+
+### 5. Verify cross-cluster connectivity
+
+- **What:** Run a connectivity test from a pod on one cluster to a service on the other cluster, proving the Submariner tunnel works.
+- **Why:** Before proceeding to Step 3 (Service Mesh), we need to confirm that the L3 tunnel is operational and that pods on Cluster A (Azure) can reach pods on Cluster B (AWS) and vice versa. This is the foundation that all cross-cluster traffic management depends on.
+
+Deploy a test pod on Cluster A and try to reach a service on Cluster B:
+
+```bash
+oc run submariner-test --image=registry.access.redhat.com/ubi9/ubi-minimal:latest \
+  -n demo-app --context cluster-a --restart=Never --rm -i -- \
+  curl -s --max-time 10 http://demo-app.demo-app.svc.clusterset.local:8080
+```
+
+Expected output (response from the demo-app running on Cluster B):
+
+```json
+{"message": "Hello from demo-app", "version": "1.0.0"}
+```
+
+> **Note:** The `.svc.clusterset.local` domain is provided by Submariner's Lighthouse DNS. It resolves to the remote cluster's service, proving end-to-end cross-cloud connectivity.
+
+If the demo-app is not yet deployed on Cluster B, you can verify basic connectivity using the Submariner diagnostic tool:
+
+```bash
+subctl diagnose all --context cluster-a
+```
+
+<details>
+<summary>✅ Verify: Submariner status summary</summary>
+
+```bash
+subctl show all --context cluster-a
+```
+
+Expected output includes:
+
+```
+CLUSTER ID                    ENDPOINT IP     PUBLIC IP       CABLE DRIVER   TYPE
+cluster-a                     10.0.x.x        <azure-ip>      libreswan      local
+cluster-b                     10.1.x.x        <aws-ip>         libreswan      remote
+
+GATEWAY                       CLUSTER         REMOTE IP       NAT   CABLE DRIVER   SUBNETS                    STATUS   RTT avg
+cluster-b-gateway-0           cluster-b       <aws-ip>         yes   libreswan      10.128.0.0/14, ...        connected   5.2ms
+```
+
+The `connected` status and RTT measurement confirm the tunnel is active between Azure and AWS.
+
+</details>
+
+---
+
+## What This Solves
+
+| Problem | How Submariner Solves It |
+|---|---|
+| No network path between clouds | IPsec tunnel connects Azure VNet and AWS VPC at the pod/service CIDR level |
+| Public IP exposure for cross-cluster traffic | All inter-cluster traffic flows through the encrypted tunnel - no public service endpoints needed |
+| Manual VPN/peering configuration | ACM deploys and manages Submariner as an add-on - no cloud-specific VPN setup required |
+| Cloud firewall complexity | Submariner automatically opens the required NSG rules (Azure) and security group rules (AWS) |
+| Multi-cluster service discovery | Lighthouse DNS provides `.svc.clusterset.local` names for services across clusters |
+
+## What This Does NOT Solve (Yet)
+
+| Remaining Problem | Addressed In |
+|---|---|
+| Application-level traffic routing (canary, blue-green) | [Step 3 - Service Mesh](../03-service-mesh-traffic-management/) |
+| Zero-trust mTLS between services | [Step 3 - Service Mesh](../03-service-mesh-traffic-management/) |
+| Weighted traffic splitting across clusters | [Step 3 - Service Mesh](../03-service-mesh-traffic-management/) |
+
+## Official Documentation
+
+- [Submariner Overview](https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.11/html/add-ons/submariner)
+- [Deploying Submariner with ACM](https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.11/html/add-ons/submariner#deploying-submariner-console)
+- [Preparing Cloud Environments for Submariner](https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.11/html/add-ons/submariner#preparing-selected-hosts-to-deploy-submariner)
+- [Submariner Globalnet](https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.11/html/add-ons/submariner#globalnet)
+- [SubmarinerConfig API Reference](https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.11/html/add-ons/submariner#submariner-config)
+
+## Alternatives Considered
+
+| Approach | Notes |
+|---|---|
+| Submariner via ACM (this solution) | Managed as an ACM add-on, automatic cloud preparation, encrypted tunnels, integrated service discovery. Requires ACM. |
+| Site-to-site VPN (Azure VPN Gateway + AWS VPN Gateway) | Cloud-native but requires manual setup on both sides, ongoing management, and does not provide service-level discovery. |
+| Public ingress IPs | Simplest approach - expose services publicly and reference the public IPs. Works for demos but not acceptable for production (security, cost, latency). |
+| VPC/VNet peering via cloud APIs | Requires same-provider or specific peering support. Does not work natively across Azure and AWS. |
+| Skupper (Service Interconnect) | Application-layer connectivity (L7). Good for specific service-to-service links but does not provide the full L3 connectivity that Service Mesh needs for multi-cluster routing. |

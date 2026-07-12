@@ -159,4 +159,5 @@ Error from server (NotFound): namespaces "demo-app" not found
 
 The next steps in this demo address these problems:
 - **[Step 1](../01-acm-workload-placement/)** introduces ACM to manage placement declaratively
-- **[Step 2](../02-service-mesh-traffic-management/)** adds Service Mesh for transparent traffic routing and zero-downtime failover
+- **[Step 2](../02-submariner-connectivity/)** deploys Submariner for encrypted cross-cloud connectivity between Azure and AWS
+- **[Step 3](../03-service-mesh-traffic-management/)** adds Service Mesh for transparent traffic routing and zero-downtime failover

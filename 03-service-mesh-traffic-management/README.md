@@ -1,17 +1,19 @@
-# Step 2 - Solution: Service Mesh for Traffic Management
+# Step 3 - Solution: Service Mesh for Traffic Management
 
 ## Summary
 
-This step adds OpenShift Service Mesh 3.0 (Istio ambient mode) on top of the ACM placement from Step 1. With Service Mesh, traffic routing is decoupled from the underlying cluster - consumers hit a stable service endpoint, and the mesh transparently routes traffic to whichever cluster is currently running the workload. This enables zero-downtime migrations, blue-green failover, canary traffic shifting, and zero-trust mutual TLS between services - all without changing DNS records or load balancers.
+This step adds OpenShift Service Mesh 3.0 (Istio ambient mode) on top of the ACM placement from [Step 1](../01-acm-workload-placement/) and the Submariner connectivity from [Step 2](../02-submariner-connectivity/). With Service Mesh, traffic routing is decoupled from the underlying cluster and cloud provider - consumers hit a stable service endpoint, and the mesh transparently routes traffic to whichever cluster is currently running the workload, whether it's on Azure or AWS. This enables zero-downtime migrations, blue-green failover, canary traffic shifting, and zero-trust mutual TLS between services - all without changing DNS records or load balancers.
 
 ## Prerequisites
 
-- ACM Hub cluster with workload placement from Step 1 fully operational
-- At least two managed clusters (`cluster-a` and `cluster-b`) joined to the Hub
+- ACM Hub cluster with workload placement from [Step 1](../01-acm-workload-placement/) fully operational
+- Submariner cross-cloud connectivity from [Step 2](../02-submariner-connectivity/) verified and working
+- At least two managed clusters (`cluster-a` on Azure, `cluster-b` on AWS) joined to the Hub
 - OpenShift Service Mesh 3.0 Operator installed on all participating clusters (Hub + managed)
 - `oc` CLI authenticated as cluster-admin on the Hub cluster
-- Both managed clusters must have network connectivity between them (for cross-cluster mesh peering)
 - Contexts renamed as described in the [Cluster Setup](../README.md#cluster-setup) section
+
+> **Note:** Cross-cluster network connectivity is provided by Submariner (Step 2). The `$REMOTE_INGRESS_IP` used in the ServiceEntry can be an internal cluster IP because Submariner's IPsec tunnel makes it reachable across Azure and AWS.
 
 > **Note:** Service Mesh resources are applied directly on the managed clusters. Every `oc` command specifies `--context cluster-a` or `--context cluster-b` explicitly.
 
@@ -311,15 +313,15 @@ curl: (56) Recv failure: Connection reset by peer
 
 ---
 
-## What This Solves (Combined with Step 1)
+## What This Solves (Combined with Steps 1 and 2)
 
-| Problem from Step 0 | How ACM + Service Mesh Solve It |
+| Problem from Step 0 | How ACM + Submariner + Service Mesh Solve It |
 |---|---|
-| DNS/Route changes on every migration | Service Mesh provides a stable virtual endpoint - consumers never see the cluster switch |
-| No traffic shifting | VirtualService enables canary, blue-green, and weighted traffic splits |
-| All-or-nothing migration | Gradual traffic shifting allows validation before committing to the new cluster |
-| No zero-trust networking | PeerAuthentication enforces strict mTLS - services communicate only with explicitly allowed peers |
-| External LB reconfiguration | Service Mesh handles routing internally - no F5 or Azure LB changes needed for workload moves |
+| DNS/Route changes on every migration | Service Mesh provides a stable virtual endpoint - consumers never see the cluster or cloud switch |
+| No traffic shifting | VirtualService enables canary, blue-green, and weighted traffic splits across Azure and AWS |
+| All-or-nothing migration | Gradual traffic shifting allows validation before committing to the new cloud/cluster |
+| No zero-trust networking | PeerAuthentication enforces strict mTLS - services communicate only with explicitly allowed peers, even across clouds |
+| External LB reconfiguration | Service Mesh handles routing internally over the Submariner tunnel - no cloud-specific LB changes needed for workload moves |
 
 ## Official Documentation
 

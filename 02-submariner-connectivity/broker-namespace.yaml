@@ -1,0 +1,10 @@
+# broker-namespace.yaml
+# Purpose: Creates the namespace where the Submariner Broker runs.
+# The broker namespace follows the ACM convention: <managedclusterset-name>-broker.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: production-clusters-broker
+  labels:
+    app.kubernetes.io/part-of: demo-app
+    cluster.open-cluster-management.io/submariner-broker-ns: "true"
