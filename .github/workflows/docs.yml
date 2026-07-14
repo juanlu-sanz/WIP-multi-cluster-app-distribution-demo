@@ -8,20 +8,14 @@ on:
       - redhat-scholars-course
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
+  contents: write
 
 env:
   SITE_DIR: "gh-pages"
 
 jobs:
-  build_site:
-    name: "Build site with Antora"
+  build_and_deploy:
+    name: "Build and deploy site"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -32,19 +26,9 @@ jobs:
         with:
           antora_playbook: site.yml
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: "${{ github.workspace }}/${{ env.SITE_DIR }}"
-
-  deploy_site:
-    runs-on: ubuntu-latest
-    needs: build_site
-    name: "Deploy to GitHub Pages"
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
       - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: ${{ env.SITE_DIR }}
+          branch: gh-pages
+          commit-message: "[CI] Publish Documentation for ${{ github.sha }}"
