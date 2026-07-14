@@ -16,7 +16,7 @@ This is a multi-cloud (Azure + AWS) demo for multi-cluster application distribut
 - `documentation/modules/ROOT/pages/` contains the course pages in `.adoc` format
 - `documentation/modules/ROOT/examples/` contains copies of YAML manifests for inline inclusion
 - `00-current-state/` simulates the current manual deployment problem (step zero)
-- `01-acm-workload-placement/` solves placement with ACM
+- `01-acm-workload-placement/` solves placement with ACM + OpenShift GitOps (ApplicationSet push model)
 - `02-submariner-connectivity/` deploys Submariner via ACM for encrypted cross-cloud (Azure to AWS) L3 connectivity
 - `03-service-mesh-traffic-management/` adds Service Mesh for networking and failover
 - `setup/` contains Terraform + post-install script for provisioning clusters (internal, not part of the demo)

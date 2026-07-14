@@ -187,7 +187,7 @@ spec:
   clusterName: $name
   clusterNamespace: $name
   applicationManager:
-    enabled: true
+    enabled: false
   certPolicyController:
     enabled: true
   policyController:
@@ -220,6 +220,60 @@ EOF
 
 import_cluster "cluster-a" "cluster-a"
 import_cluster "cluster-b" "cluster-b"
+
+# -----------------------------------------------------------------------------
+# Configure ACM + GitOps integration (GitOpsCluster push model)
+# -----------------------------------------------------------------------------
+
+echo "==> Configuring ACM GitOps integration on Hub..."
+
+cat <<'EOF' | oc apply --context hub -f -
+apiVersion: cluster.open-cluster-management.io/v1beta2
+kind: ManagedClusterSetBinding
+metadata:
+  name: global
+  namespace: openshift-gitops
+spec:
+  clusterSet: global
+EOF
+
+cat <<'EOF' | oc apply --context hub -f -
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: all-openshift-clusters
+  namespace: openshift-gitops
+spec:
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchLabels:
+            vendor: OpenShift
+EOF
+
+cat <<'EOF' | oc apply --context hub -f -
+apiVersion: apps.open-cluster-management.io/v1beta1
+kind: GitOpsCluster
+metadata:
+  name: gitops-clusters
+  namespace: openshift-gitops
+spec:
+  argoServer:
+    cluster: local-cluster
+    argoNamespace: openshift-gitops
+  placementRef:
+    kind: Placement
+    apiVersion: cluster.open-cluster-management.io/v1beta1
+    name: all-openshift-clusters
+    namespace: openshift-gitops
+EOF
+
+echo "    Waiting for ArgoCD cluster secrets..."
+until oc get secrets -n openshift-gitops -l argocd.argoproj.io/secret-type=cluster --context hub 2>/dev/null | grep -q cluster; do
+  sleep 5
+done
+
+echo "    GitOps integration configured."
 
 # -----------------------------------------------------------------------------
 # Install OpenShift Service Mesh 3.0 on managed clusters

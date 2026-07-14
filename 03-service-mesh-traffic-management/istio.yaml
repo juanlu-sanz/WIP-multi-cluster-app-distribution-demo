@@ -2,7 +2,7 @@
 # Purpose: Deploys the Istio control plane in ambient mode on the cluster.
 # Ambient mode uses a per-node ztunnel DaemonSet for Layer 4 traffic interception
 # instead of sidecar proxies in every pod.
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
   name: default

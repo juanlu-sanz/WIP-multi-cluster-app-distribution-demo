@@ -49,8 +49,8 @@ export REMOTE_INGRESS_IP="10.0.0.1"
 | API server URL for the second managed cluster (AWS)
 
 | `GIT_ORG`
-| `01-acm-workload-placement/channel.yaml`
-| GitHub org/user for the ACM Channel Git repository
+| `01-acm-workload-placement/applicationset.yaml`
+| GitHub org/user for the ApplicationSet Git source repository
 
 | `REMOTE_INGRESS_IP`
 | `03-service-mesh-traffic-management/service-entry.yaml`

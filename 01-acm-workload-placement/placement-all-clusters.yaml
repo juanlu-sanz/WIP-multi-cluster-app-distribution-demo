@@ -1,0 +1,19 @@
+# placement-all-clusters.yaml
+# Purpose: Selects all production clusters for ArgoCD registration via GitOpsCluster.
+# This ensures ArgoCD has cluster secrets for every potential target, so the
+# ApplicationSet can deploy to any cluster selected by the app-specific Placement.
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: all-production-clusters
+  namespace: openshift-gitops
+  labels:
+    app.kubernetes.io/part-of: demo-app
+spec:
+  clusterSets:
+    - production-clusters
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchLabels:
+            environment: production

@@ -1,11 +1,11 @@
 # placement-cluster-a.yaml
-# Purpose: Initial Placement rule — deploys the application to cluster-a (west-europe).
-# To migrate the app to a different cluster, replace this file with placement-cluster-b.yaml.
+# Purpose: Initial Placement - deploys the application to cluster-a (west-europe).
+# To migrate the app to a different cluster, apply placement-cluster-b.yaml instead.
 apiVersion: cluster.open-cluster-management.io/v1beta1
 kind: Placement
 metadata:
   name: demo-app-placement
-  namespace: demo-app-acm
+  namespace: openshift-gitops
   labels:
     app.kubernetes.io/part-of: demo-app
 spec:

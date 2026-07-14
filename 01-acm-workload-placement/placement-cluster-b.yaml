@@ -1,11 +1,11 @@
 # placement-cluster-b.yaml
-# Purpose: Updated Placement rule — migrates the application to cluster-b (north-europe).
+# Purpose: Updated Placement - migrates the application to cluster-b (north-europe).
 # Apply this file to replace the current placement and trigger ACM to move the workload.
 apiVersion: cluster.open-cluster-management.io/v1beta1
 kind: Placement
 metadata:
   name: demo-app-placement
-  namespace: demo-app-acm
+  namespace: openshift-gitops
   labels:
     app.kubernetes.io/part-of: demo-app
 spec:

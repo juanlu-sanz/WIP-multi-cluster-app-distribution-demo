@@ -23,9 +23,9 @@ This tutorial demonstrates how to achieve seamless application mobility across m
 * xref:01-current-state.adoc#migrate-cluster-b[Migrate to Cluster B]
 
 [.tile]
-.xref:02-acm-workload-placement.adoc[Step 1: ACM Workload Placement]
-* xref:02-acm-workload-placement.adoc#label-clusters[Label Clusters]
-* xref:02-acm-workload-placement.adoc#deploy-acm-app[Deploy via ACM]
+.xref:02-acm-workload-placement.adoc[Step 1: ACM Workload Placement with GitOps]
+* xref:02-acm-workload-placement.adoc#register-clusters[Register Clusters with Argo CD]
+* xref:02-acm-workload-placement.adoc#deploy-appset[Deploy via ApplicationSet]
 * xref:02-acm-workload-placement.adoc#migrate[Migrate to Cluster B]
 
 [.tile]
@@ -36,6 +36,7 @@ This tutorial demonstrates how to achieve seamless application mobility across m
 
 [.tile]
 .xref:04-service-mesh.adoc[Step 3: Service Mesh Traffic Management]
+* xref:04-service-mesh.adoc#deploy-both-clusters[Deploy to Both Clusters]
 * xref:04-service-mesh.adoc#install-istio[Install Istio]
 * xref:04-service-mesh.adoc#blue-green[Blue-Green Migration]
 * xref:04-service-mesh.adoc#canary[Canary Shifting]

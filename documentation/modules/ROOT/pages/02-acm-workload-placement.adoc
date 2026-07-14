@@ -1,7 +1,7 @@
-= Step 1 - Solution: ACM Workload Placement
+= Step 1 - Solution: ACM Workload Placement with GitOps
 include::_attributes.adoc[]
 
-This step introduces Red Hat Advanced Cluster Management (ACM) to manage workload placement declaratively. Instead of manually deploying to individual clusters and reconfiguring pipelines, we define a `Placement` rule in YAML that tells ACM where the application should run. To migrate the application from one cluster to another, we simply update the placement rule - ACM handles the rest. Combined with OpenShift GitOps (Argo CD), the entire desired state lives in Git, providing both a single control plane for multi-cluster deployments and a foundation for disaster recovery.
+This step introduces Red Hat Advanced Cluster Management (ACM) combined with OpenShift GitOps (Argo CD) to manage workload placement declaratively. Instead of manually deploying to individual clusters and reconfiguring pipelines, we define a `Placement` rule that tells ACM where the application should run and an `ApplicationSet` that tells Argo CD what to deploy. To migrate the application from one cluster to another, we simply update the Placement - ACM and Argo CD handle the rest. The entire desired state lives in Git, providing a single control plane for multi-cluster deployments and a foundation for disaster recovery.
 
 == Prerequisites
 
@@ -13,6 +13,17 @@ This step introduces Red Hat Advanced Cluster Management (ACM) to manage workloa
 * Managed clusters labeled appropriately (see step 1 below)
 
 NOTE: All commands in this step run on the Hub cluster (`--context hub`) unless a `--context cluster-a` or `--context cluster-b` flag specifies otherwise.
+
+== How It Works
+
+The push model uses four resources working together:
+
+. *ManagedClusterSet + Binding* - Groups clusters and exposes them to the `openshift-gitops` namespace
+. *Placement* - Selects which clusters receive the workload based on labels
+. *GitOpsCluster* - Registers ACM managed clusters as Argo CD cluster secrets
+. *ApplicationSet* - Reads from the PlacementDecision and generates an Argo CD Application per selected cluster
+
+When the Placement changes (e.g. different region label), ACM updates the PlacementDecision. The ApplicationSet detects this, removes the Application from the old cluster (pruning all resources), and creates a new Application on the newly selected cluster.
 
 == Steps to Apply
 
@@ -51,11 +62,11 @@ cluster-b   true           https://api.cluster-b.example.com     True     True  
 '''
 
 [#create-clusterset]
-=== 2. Create the ManagedClusterSet
+=== 2. Create the ManagedClusterSet and bind it to the GitOps namespace
 
-*What:* Group the managed clusters into a `ManagedClusterSet` and bind it to the ACM application namespace.
+*What:* Group the managed clusters into a `ManagedClusterSet` and bind it to the `openshift-gitops` namespace where Argo CD runs.
 
-*Why:* A ManagedClusterSet defines the pool of clusters that Placement rules can select from. The binding allows resources in the `demo-app-acm` namespace to reference this set. Without the binding, the Placement has no clusters to choose from.
+*Why:* A ManagedClusterSet defines the pool of clusters that Placement rules can select from. The binding allows resources in `openshift-gitops` to reference this set. Without the binding, the Placement has no clusters to choose from.
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
@@ -83,7 +94,7 @@ production-clusters    False   10s
 [.console-input]
 [source,bash]
 ----
-oc get managedclustersetbinding -n demo-app-acm --context hub
+oc get managedclustersetbinding -n openshift-gitops --context hub
 ----
 
 [.console-output]
@@ -96,38 +107,99 @@ production-clusters    production-clusters   10s
 
 '''
 
-[#deploy-acm-app]
-=== 3. Create the Namespace, Channel, Placement, and Subscription
+[#register-clusters]
+=== 3. Register clusters with Argo CD via GitOpsCluster
 
-*What:* Deploy the ACM application lifecycle resources: a Namespace for ACM control objects, a Channel pointing to the Git repo with the app manifests, a Placement rule targeting `cluster-a`, and a Subscription that ties them together.
+*What:* Create a Placement that selects all production clusters, and a GitOpsCluster CR that registers those clusters as Argo CD cluster secrets.
 
-*Why:* This is the core of ACM application deployment. The Channel tells ACM where the manifests live (Git). The Placement tells ACM which cluster to deploy to. The Subscription connects them - "deploy the manifests from this Channel to whichever cluster the Placement selects." From this point on, placement is declarative: change the Placement YAML, and ACM moves the application.
+*Why:* Argo CD needs cluster credentials (stored as Kubernetes secrets) to deploy applications remotely. The GitOpsCluster CR bridges ACM's cluster inventory with Argo CD - any cluster selected by the referenced Placement gets a corresponding Argo CD secret. This is what enables Argo CD to push manifests to managed clusters.
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-oc apply -f 01-acm-workload-placement/namespace.yaml --context hub
-envsubst < 01-acm-workload-placement/channel.yaml | oc apply --context hub -f -
-oc apply -f 01-acm-workload-placement/placement-cluster-a.yaml --context hub
-oc apply -f 01-acm-workload-placement/subscription.yaml --context hub
+oc apply -f 01-acm-workload-placement/placement-all-clusters.yaml --context hub
+oc apply -f 01-acm-workload-placement/gitopscluster.yaml --context hub
 ----
 
-.Verify: Application deployed to Cluster A via ACM
+.Verify: Argo CD cluster secrets created
 [%collapsible]
 ====
-Check the Subscription status on the Hub:
+Wait 30-60 seconds for ACM to sync the cluster secrets.
 
 [.console-input]
 [source,bash]
 ----
-oc get subscription demo-app-subscription -n demo-app-acm --context hub
+oc get secrets -n openshift-gitops -l argocd.argoproj.io/secret-type=cluster --context hub
 ----
 
 [.console-output]
 [source,bash]
 ----
-NAME                     STATUS       AGE
-demo-app-subscription    Propagated   30s
+NAME                                          TYPE     DATA   AGE
+cluster-a-cluster-secret                      Opaque   3      30s
+cluster-b-cluster-secret                      Opaque   3      30s
+----
+
+Also verify the `acm-placement` ConfigMap exists (required by the ApplicationSet generator):
+
+[.console-input]
+[source,bash]
+----
+oc get configmap acm-placement -n openshift-gitops --context hub
+----
+
+[.console-output]
+[source,bash]
+----
+NAME            DATA   AGE
+acm-placement   1      30s
+----
+====
+
+'''
+
+[#deploy-appset]
+=== 4. Create the Placement and ApplicationSet to deploy the application
+
+*What:* Create a Placement that targets `cluster-a` (west-europe) and an ApplicationSet that deploys the application to whichever clusters that Placement selects.
+
+*Why:* This is the core of the GitOps-based deployment model. The Placement tells ACM which cluster should run the application. The ApplicationSet uses a `clusterDecisionResource` generator that reads from ACM's PlacementDecision - it knows which clusters are selected and generates one Argo CD Application per cluster. Argo CD then syncs the application manifests from Git to the target cluster.
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc apply -f 01-acm-workload-placement/placement-cluster-a.yaml --context hub
+envsubst < 01-acm-workload-placement/applicationset.yaml | oc apply --context hub -f -
+----
+
+.Verify: Application deployed to Cluster A via Argo CD
+[%collapsible]
+====
+Check the ApplicationSet and generated Application:
+
+[.console-input]
+[source,bash]
+----
+oc get applicationsets -n openshift-gitops --context hub
+----
+
+[.console-output]
+[source,bash]
+----
+NAME       AGE
+demo-app   30s
+----
+
+[.console-input]
+[source,bash]
+----
+oc get applications.argoproj.io -n openshift-gitops --context hub | grep demo-app
+----
+
+[.console-output]
+[source,bash]
+----
+demo-app-cluster-a   Synced   Healthy   default   https://github.com/.../multi-cluster-app-distribution-demo.git   00-current-state
 ----
 
 Check that ACM placed the workload on `cluster-a`:
@@ -135,15 +207,15 @@ Check that ACM placed the workload on `cluster-a`:
 [.console-input]
 [source,bash]
 ----
-oc get placementdecision -n demo-app-acm --context hub -o yaml | grep -A5 "decisions:"
+oc get placementdecisions -n openshift-gitops --context hub \
+  -l cluster.open-cluster-management.io/placement=demo-app-placement \
+  -o jsonpath='{range .items[*]}{.status.decisions[*].clusterName}{"\n"}{end}'
 ----
 
 [.console-output]
-[source,yaml]
+[source,bash]
 ----
-  decisions:
-    - clusterName: cluster-a
-      reason: ""
+cluster-a
 ----
 
 Verify the pods are running on Cluster A:
@@ -166,11 +238,11 @@ demo-app-6d4f5b7c8-r7t3p   1/1     Running   0          45s
 '''
 
 [#migrate]
-=== 4. Migrate the application to Cluster B
+=== 5. Migrate the application to Cluster B
 
 *What:* Replace the Placement rule with one that targets `cluster-b` (north-europe) instead of `cluster-a` (west-europe).
 
-*Why:* This is the migration itself - and the key difference from Step 0. Instead of logging into two clusters, re-applying manifests, updating DNS, and cleaning up the old deployment, we change a single YAML file. ACM deploys the application to cluster-b and removes it from cluster-a automatically.
+*Why:* This is the migration itself - and the key difference from Step 0. Instead of logging into two clusters, re-applying manifests, updating DNS, and cleaning up the old deployment, we change a single YAML file. The ApplicationSet detects the PlacementDecision change, removes the Argo CD Application from cluster-a (pruning all resources), and creates a new Application on cluster-b.
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
@@ -178,10 +250,10 @@ demo-app-6d4f5b7c8-r7t3p   1/1     Running   0          45s
 oc apply -f 01-acm-workload-placement/placement-cluster-b.yaml --context hub
 ----
 
-This replaces the previous Placement that targeted `cluster-a` with one that targets `cluster-b`. ACM will:
+This replaces the previous Placement that targeted `cluster-a` with one that targets `cluster-b`. The ApplicationSet will:
 
-. Deploy the application to `cluster-b`
-. Remove it from `cluster-a`
+. Delete the `demo-app-cluster-a` Application (Argo CD prunes all resources from cluster-a)
+. Create a new `demo-app-cluster-b` Application (Argo CD syncs manifests to cluster-b)
 
 .Verify: Application migrated to Cluster B
 [%collapsible]
@@ -191,15 +263,29 @@ Check the updated PlacementDecision:
 [.console-input]
 [source,bash]
 ----
-oc get placementdecision -n demo-app-acm --context hub -o yaml | grep -A5 "decisions:"
+oc get placementdecisions -n openshift-gitops --context hub \
+  -l cluster.open-cluster-management.io/placement=demo-app-placement \
+  -o jsonpath='{range .items[*]}{.status.decisions[*].clusterName}{"\n"}{end}'
 ----
 
 [.console-output]
-[source,yaml]
+[source,bash]
 ----
-  decisions:
-    - clusterName: cluster-b
-      reason: ""
+cluster-b
+----
+
+Check that the Argo CD Application now targets cluster-b:
+
+[.console-input]
+[source,bash]
+----
+oc get applications.argoproj.io -n openshift-gitops --context hub | grep demo-app
+----
+
+[.console-output]
+[source,bash]
+----
+demo-app-cluster-b   Synced   Healthy   default   https://github.com/.../multi-cluster-app-distribution-demo.git   00-current-state
 ----
 
 Verify the pods are now running on Cluster B:
@@ -251,23 +337,39 @@ curl -sk https://$(oc get route demo-app -n demo-app --context cluster-b -o json
 
 '''
 
+[#automatic-failover]
+=== 6. (Bonus) Automatic failover on cluster fault
+
+*What:* When a managed cluster becomes unreachable, ACM automatically evicts it from the PlacementDecision, and the ApplicationSet redeploys the application on another healthy cluster - no manual intervention required.
+
+*Why:* This provides disaster recovery for stateless workloads out of the box. Unlike the deprecated Channel/Subscription model, the ApplicationSet push model reacts to ACM taints in real-time. If cluster-a goes down, ACM marks it with a `cluster.open-cluster-management.io/unreachable` taint, the Placement evicts it (since our Placement does not tolerate that taint), and the ApplicationSet moves the application to the next matching cluster.
+
+NOTE: This is automatic for stateless workloads only. Stateful applications with persistent data require additional tooling (OpenShift DR, VolSync, or OADP) and user-initiated failover to prevent data loss.
+
+TIP: To delay automatic eviction (avoiding reaction to brief network disruptions), add a `tolerationSeconds` field to the Placement's taint tolerations. See the link:https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.11/html/clusters/cluster_mce_overview#placement-tolerations[Placement tolerations documentation].
+
+'''
+
 == What This Solves (Compared to Step 0)
 
 [cols="2,3",options="header"]
 |===
-| Problem from Step 0 | How ACM Solves It
+| Problem from Step 0 | How ACM + GitOps Solves It
 
 | No single control plane
-| ACM Hub manages all clusters from one place
+| ACM Hub + Argo CD manages all clusters from one place
 
 | Manual pipeline reconfiguration
-| Placement rules are YAML - change the label selector, ACM handles the rest
+| Placement rules are YAML - change the label selector, ApplicationSet handles the rest
 
 | No disaster recovery posture
-| All placement rules live in Git - rebuild from Git if the Hub goes down
+| Automatic failover when a cluster becomes unreachable; all state lives in Git
 
 | Manual process at scale
 | One `Placement` change moves the app across any number of clusters
+
+| No GitOps workflow
+| Argo CD syncs from Git with self-healing and automated pruning
 |===
 
 == What This Does NOT Solve (Yet)
@@ -291,11 +393,11 @@ curl -sk https://$(oc get route demo-app -n demo-app --context cluster-b -o json
 
 == Official Documentation
 
-* link:https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.11/html/applications/managing-applications[ACM Application Lifecycle Management]
+* link:https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.11/html-single/gitops/index[ACM GitOps Integration Overview]
 * link:https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.11/html/clusters/cluster_mce_overview#placement-overview[Placement API Overview]
 * link:https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.11/html/clusters/cluster_mce_overview#managedclustersets-intro[ManagedClusterSets]
-* link:https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.11/html/applications/managing-applications#managing-subscriptions[Subscriptions]
 * link:https://docs.redhat.com/en/documentation/red_hat_openshift_gitops/1.14/html/understanding_openshift_gitops/index[OpenShift GitOps Operator]
+* link:https://docs.redhat.com/en/documentation/red_hat_openshift_gitops/1.14/html/argo_cd_custom_resource_workloads/configuring-applicationsets-argocd[Configuring ApplicationSets in Argo CD]
 
 == Alternatives Considered
 
@@ -303,14 +405,14 @@ curl -sk https://$(oc get route demo-app -n demo-app --context cluster-b -o json
 |===
 | Approach | Notes
 
-| ACM Placement (this solution)
-| Declarative, GitOps-native, single control plane for placement across all clusters. Requires ACM Hub.
+| ACM + GitOps ApplicationSet (this solution)
+| Declarative, GitOps-native, single control plane for placement across all clusters. Automatic failover for stateless workloads. Requires ACM Hub + OpenShift GitOps.
 
 | Manual `oc apply` per cluster
 | Current state (Step 0). Simple but does not scale and creates operational burden.
 
-| ArgoCD ApplicationSets with cluster generators
-| Can deploy to multiple clusters from a single Argo CD instance, but lacks ACM's policy engine and cluster lifecycle management.
+| ACM Channel/Subscription (deprecated)
+| Legacy ACM application lifecycle model. Deprecated since ACM 2.10 in favor of GitOps integration. Does not provide Argo CD self-heal or prune capabilities.
 
 | Hive + ClusterDeployments
 | Useful for cluster provisioning, not specifically for application placement.

@@ -18,8 +18,52 @@ NOTE: Service Mesh resources are applied directly on the managed clusters. Every
 
 == Steps to Apply
 
+[#deploy-both-clusters]
+=== 1. Deploy the application to both clusters
+
+*What:* Update the Placement from Step 1 to select both managed clusters, so the application runs on cluster-a and cluster-b simultaneously.
+
+*Why:* Cross-cluster traffic management (canary, blue-green, weighted routing) requires the application to be running on both clusters. In Step 1, the Placement selected only one cluster at a time. For Service Mesh to route traffic between clusters, both must have the workload deployed. Removing the `numberOfClusters: 1` constraint and broadening the label selector allows the ApplicationSet to generate Applications for both clusters.
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc patch placement demo-app-placement -n openshift-gitops --context hub --type merge \
+  -p '{"spec":{"numberOfClusters": 2, "predicates":[{"requiredClusterSelector":{"labelSelector":{"matchLabels":{"environment":"production"}}}}]}}'
+----
+
+.Verify: Application running on both clusters
+[%collapsible]
+====
+Wait 30-60 seconds for Argo CD to sync.
+
+[.console-input]
+[source,bash]
+----
+oc get applications.argoproj.io -n openshift-gitops --context hub | grep demo-app
+----
+
+[.console-output]
+[source,bash]
+----
+demo-app-cluster-a   Synced   Healthy   ...
+demo-app-cluster-b   Synced   Healthy   ...
+----
+
+[.console-input]
+[source,bash]
+----
+oc get pods -n demo-app --context cluster-a
+oc get pods -n demo-app --context cluster-b
+----
+
+Both clusters should show running pods.
+====
+
+'''
+
 [#install-istio]
-=== 1. Install the Istio control plane in ambient mode
+=== 2. Install the Istio control plane in ambient mode
 
 *What:* Deploy the Istio control plane using the ambient profile, which installs a ztunnel DaemonSet on every node for Layer 4 traffic interception.
 
@@ -65,7 +109,7 @@ ztunnel   3         3         3       3             3           45s
 '''
 
 [#enroll-namespace]
-=== 2. Enroll the application namespace into the mesh
+=== 3. Enroll the application namespace into the mesh
 
 *What:* Label the `demo-app` namespace with `istio.io/dataplane-mode=ambient` on both managed clusters.
 
@@ -97,7 +141,7 @@ istio.io/dataplane-mode=ambient
 '''
 
 [#waypoint]
-=== 3. Deploy the waypoint proxy for Layer 7 capabilities
+=== 4. Deploy the waypoint proxy for Layer 7 capabilities
 
 *What:* Deploy a waypoint Gateway resource in the `demo-app` namespace on both clusters.
 
@@ -130,7 +174,7 @@ demo-app-waypoint   istio   10.96.xxx.xxx   True         30s
 '''
 
 [#service-entry]
-=== 4. Apply the cross-cluster ServiceEntry
+=== 5. Apply the cross-cluster ServiceEntry
 
 *What:* Create a ServiceEntry that registers the remote cluster's demo-app as a mesh-internal service accessible via `demo-app.demo-app.global`.
 
@@ -163,7 +207,7 @@ demo-app-cross-cluster  ["demo-app.demo-app.global"]    MESH_INTERNAL DNS       
 '''
 
 [#virtual-service]
-=== 5. Apply the VirtualService for traffic routing
+=== 6. Apply the VirtualService for traffic routing
 
 *What:* Create a VirtualService that controls how traffic to `demo-app.demo-app.global` is distributed. Start with 100% to cluster-a.
 
@@ -194,7 +238,7 @@ demo-app-routing              ["demo-app.demo-app.global"] 10s
 
 '''
 
-=== 6. Apply the DestinationRule for cluster-specific subsets
+=== 7. Apply the DestinationRule for cluster-specific subsets
 
 *What:* Create a DestinationRule that defines named subsets (`cluster-a`, `cluster-b`) based on endpoint labels, with mTLS enabled.
 
@@ -226,7 +270,7 @@ demo-app-dr   demo-app.demo-app.global   10s
 '''
 
 [#blue-green]
-=== 7. Perform a blue-green migration
+=== 8. Perform a blue-green migration
 
 *What:* Switch 100% of traffic from cluster-a to cluster-b by applying an updated VirtualService.
 
@@ -275,7 +319,7 @@ curl -s http://demo-app.demo-app.global
 '''
 
 [#canary]
-=== 8. (Optional) Canary traffic shifting
+=== 9. (Optional) Canary traffic shifting
 
 *What:* Instead of an all-at-once switch, apply a VirtualService that sends 90% of traffic to cluster-a and 10% to cluster-b.
 
@@ -314,7 +358,7 @@ oc get virtualservice demo-app-routing -n demo-app --context cluster-a -o yaml |
 '''
 
 [#mtls]
-=== 9. Apply the PeerAuthentication for zero-trust mTLS
+=== 10. Apply the PeerAuthentication for zero-trust mTLS
 
 *What:* Enforce STRICT mutual TLS for the `demo-app` namespace on both clusters, requiring all communication to present a valid mesh identity.
 
