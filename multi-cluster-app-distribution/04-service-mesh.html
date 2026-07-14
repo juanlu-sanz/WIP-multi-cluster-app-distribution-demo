@@ -237,7 +237,51 @@ Service Mesh resources are applied directly on the managed clusters. Every <code
 <h2 id="_steps_to_apply"><a class="anchor" href="#_steps_to_apply"></a>Steps to Apply</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="install-istio"><a class="anchor" href="#install-istio"></a>1. Install the Istio control plane in ambient mode</h3>
+<h3 id="deploy-both-clusters"><a class="anchor" href="#deploy-both-clusters"></a>1. Deploy the application to both clusters</h3>
+<div class="paragraph">
+<p><strong>What:</strong> Update the Placement from Step 1 to select both managed clusters, so the application runs on cluster-a and cluster-b simultaneously.</p>
+</div>
+<div class="paragraph">
+<p><strong>Why:</strong> Cross-cluster traffic management (canary, blue-green, weighted routing) requires the application to be running on both clusters. In Step 1, the Placement selected only one cluster at a time. For Service Mesh to route traffic between clusters, both must have the workload deployed. Removing the <code>numberOfClusters: 1</code> constraint and broadening the label selector allows the ApplicationSet to generate Applications for both clusters.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc patch placement demo-app-placement -n openshift-gitops --context hub --type merge \
+  -p '{"spec":{"numberOfClusters": 2, "predicates":[{"requiredClusterSelector":{"labelSelector":{"matchLabels":{"environment":"production"}}}}]}}'</code></pre>
+</div>
+</div>
+<details>
+<summary class="title">Verify: Application running on both clusters</summary>
+<div class="content">
+<div class="paragraph">
+<p>Wait 30-60 seconds for Argo CD to sync.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get applications.argoproj.io -n openshift-gitops --context hub | grep demo-app</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">demo-app-cluster-a   Synced   Healthy   ...
+demo-app-cluster-b   Synced   Healthy   ...</code></pre>
+</div>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get pods -n demo-app --context cluster-a
+oc get pods -n demo-app --context cluster-b</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Both clusters should show running pods.</p>
+</div>
+</div>
+</details>
+<hr>
+</div>
+<div class="sect2">
+<h3 id="install-istio"><a class="anchor" href="#install-istio"></a>2. Install the Istio control plane in ambient mode</h3>
 <div class="paragraph">
 <p><strong>What:</strong> Deploy the Istio control plane using the ambient profile, which installs a ztunnel DaemonSet on every node for Layer 4 traffic interception.</p>
 </div>
@@ -280,7 +324,7 @@ ztunnel   3         3         3       3             3           45s</code></pre>
 <hr>
 </div>
 <div class="sect2">
-<h3 id="enroll-namespace"><a class="anchor" href="#enroll-namespace"></a>2. Enroll the application namespace into the mesh</h3>
+<h3 id="enroll-namespace"><a class="anchor" href="#enroll-namespace"></a>3. Enroll the application namespace into the mesh</h3>
 <div class="paragraph">
 <p><strong>What:</strong> Label the <code>demo-app</code> namespace with <code>istio.io/dataplane-mode=ambient</code> on both managed clusters.</p>
 </div>
@@ -311,7 +355,7 @@ oc label namespace demo-app istio.io/dataplane-mode=ambient --context cluster-b 
 <hr>
 </div>
 <div class="sect2">
-<h3 id="waypoint"><a class="anchor" href="#waypoint"></a>3. Deploy the waypoint proxy for Layer 7 capabilities</h3>
+<h3 id="waypoint"><a class="anchor" href="#waypoint"></a>4. Deploy the waypoint proxy for Layer 7 capabilities</h3>
 <div class="paragraph">
 <p><strong>What:</strong> Deploy a waypoint Gateway resource in the <code>demo-app</code> namespace on both clusters.</p>
 </div>
@@ -343,7 +387,7 @@ demo-app-waypoint   istio   10.96.xxx.xxx   True         30s</code></pre>
 <hr>
 </div>
 <div class="sect2">
-<h3 id="service-entry"><a class="anchor" href="#service-entry"></a>4. Apply the cross-cluster ServiceEntry</h3>
+<h3 id="service-entry"><a class="anchor" href="#service-entry"></a>5. Apply the cross-cluster ServiceEntry</h3>
 <div class="paragraph">
 <p><strong>What:</strong> Create a ServiceEntry that registers the remote cluster&#8217;s demo-app as a mesh-internal service accessible via <code>demo-app.demo-app.global</code>.</p>
 </div>
@@ -375,7 +419,7 @@ demo-app-cross-cluster  ["demo-app.demo-app.global"]    MESH_INTERNAL DNS       
 <hr>
 </div>
 <div class="sect2">
-<h3 id="virtual-service"><a class="anchor" href="#virtual-service"></a>5. Apply the VirtualService for traffic routing</h3>
+<h3 id="virtual-service"><a class="anchor" href="#virtual-service"></a>6. Apply the VirtualService for traffic routing</h3>
 <div class="paragraph">
 <p><strong>What:</strong> Create a VirtualService that controls how traffic to <code>demo-app.demo-app.global</code> is distributed. Start with 100% to cluster-a.</p>
 </div>
@@ -406,7 +450,7 @@ demo-app-routing              ["demo-app.demo-app.global"] 10s</code></pre>
 <hr>
 </div>
 <div class="sect2">
-<h3 id="_6_apply_the_destinationrule_for_cluster_specific_subsets"><a class="anchor" href="#_6_apply_the_destinationrule_for_cluster_specific_subsets"></a>6. Apply the DestinationRule for cluster-specific subsets</h3>
+<h3 id="_7_apply_the_destinationrule_for_cluster_specific_subsets"><a class="anchor" href="#_7_apply_the_destinationrule_for_cluster_specific_subsets"></a>7. Apply the DestinationRule for cluster-specific subsets</h3>
 <div class="paragraph">
 <p><strong>What:</strong> Create a DestinationRule that defines named subsets (<code>cluster-a</code>, <code>cluster-b</code>) based on endpoint labels, with mTLS enabled.</p>
 </div>
@@ -437,7 +481,7 @@ demo-app-dr   demo-app.demo-app.global   10s</code></pre>
 <hr>
 </div>
 <div class="sect2">
-<h3 id="blue-green"><a class="anchor" href="#blue-green"></a>7. Perform a blue-green migration</h3>
+<h3 id="blue-green"><a class="anchor" href="#blue-green"></a>8. Perform a blue-green migration</h3>
 <div class="paragraph">
 <p><strong>What:</strong> Switch 100% of traffic from cluster-a to cluster-b by applying an updated VirtualService.</p>
 </div>
@@ -484,7 +528,7 @@ demo-app-dr   demo-app.demo-app.global   10s</code></pre>
 <hr>
 </div>
 <div class="sect2">
-<h3 id="canary"><a class="anchor" href="#canary"></a>8. (Optional) Canary traffic shifting</h3>
+<h3 id="canary"><a class="anchor" href="#canary"></a>9. (Optional) Canary traffic shifting</h3>
 <div class="paragraph">
 <p><strong>What:</strong> Instead of an all-at-once switch, apply a VirtualService that sends 90% of traffic to cluster-a and 10% to cluster-b.</p>
 </div>
@@ -522,7 +566,7 @@ demo-app-dr   demo-app.demo-app.global   10s</code></pre>
 <hr>
 </div>
 <div class="sect2">
-<h3 id="mtls"><a class="anchor" href="#mtls"></a>9. Apply the PeerAuthentication for zero-trust mTLS</h3>
+<h3 id="mtls"><a class="anchor" href="#mtls"></a>10. Apply the PeerAuthentication for zero-trust mTLS</h3>
 <div class="paragraph">
 <p><strong>What:</strong> Enforce STRICT mutual TLS for the <code>demo-app</code> namespace on both clusters, requiring all communication to present a valid mesh identity.</p>
 </div>
