@@ -384,11 +384,11 @@ acm-placement   1      30s</code></pre>
 <p><strong>What:</strong> Create a Placement that targets <code>cluster-a</code> (west-europe) and an ApplicationSet that deploys the application to whichever clusters that Placement selects.</p>
 </div>
 <div class="paragraph">
-<p><strong>Why:</strong> This is the core of the GitOps-based deployment model. The Placement tells ACM which cluster should run the application. The ApplicationSet uses a <code>clusterDecisionResource</code> generator that reads from ACM&#8217;s PlacementDecision - it knows which clusters are selected and generates one Argo CD Application per cluster. Argo CD then syncs the application manifests from Git to the target cluster.</p>
+<p><strong>Why:</strong> This is the core of the GitOps-based deployment model. The Placement tells ACM which cluster should run the application. The ApplicationSet uses a <code>clusterDecisionResource</code> generator that reads from ACM&#8217;s PlacementDecision - it knows which clusters are selected and generates one Argo CD Application per cluster. Argo CD then syncs the application manifests from the <code>kustomize/overlays/production</code> path in Git to the target cluster.</p>
 </div>
 <div class="listingblock console-input">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc apply -f 01-acm-workload-placement/placement-cluster-a.yaml --context hub
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc apply -f 01-acm-workload-placement/placement.yaml --context hub
 envsubst &lt; 01-acm-workload-placement/applicationset.yaml | oc apply --context hub -f -</code></pre>
 </div>
 </div>
@@ -416,7 +416,7 @@ demo-app   30s</code></pre>
 </div>
 <div class="listingblock console-output">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">demo-app-cluster-a   Synced   Healthy   default   https://github.com/.../multi-cluster-app-distribution-demo.git   00-current-state</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">demo-app-cluster-a   Synced   Healthy   default   https://github.com/.../multi-cluster-app-distribution-demo.git   kustomize/overlays/production</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -456,26 +456,40 @@ demo-app-6d4f5b7c8-r7t3p   1/1     Running   0          45s</code></pre>
 <div class="sect2">
 <h3 id="migrate"><a class="anchor" href="#migrate"></a>5. Migrate the application to Cluster B</h3>
 <div class="paragraph">
-<p><strong>What:</strong> Replace the Placement rule with one that targets <code>cluster-b</code> (north-europe) instead of <code>cluster-a</code> (west-europe).</p>
+<p><strong>What:</strong> Patch the Placement to change the label selector from <code>region: west-europe</code> to <code>region: north-europe</code>, moving the application to cluster-b.</p>
 </div>
 <div class="paragraph">
-<p><strong>Why:</strong> This is the migration itself - and the key difference from Step 0. Instead of logging into two clusters, re-applying manifests, updating DNS, and cleaning up the old deployment, we change a single YAML file. The ApplicationSet detects the PlacementDecision change, removes the Argo CD Application from cluster-a (pruning all resources), and creates a new Application on cluster-b.</p>
+<p><strong>Why:</strong> This is the migration itself - and the key difference from Step 0. Instead of logging into two clusters, re-applying manifests, updating DNS, and cleaning up the old deployment, we patch a single Placement resource. ACM re-evaluates, updates the PlacementDecision, and the ApplicationSet automatically removes the Application from cluster-a (pruning all resources) and creates a new Application on cluster-b.</p>
 </div>
 <div class="listingblock console-input">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc apply -f 01-acm-workload-placement/placement-cluster-b.yaml --context hub</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc patch placement demo-app-placement -n openshift-gitops --context hub --type merge \
+  -p '{"spec":{"predicates":[{"requiredClusterSelector":{"labelSelector":{"matchLabels":{"region":"north-europe"}}}}]}}'</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>This replaces the previous Placement that targeted <code>cluster-a</code> with one that targets <code>cluster-b</code>. The ApplicationSet will:</p>
+<p>The Placement re-evaluates. Since the selector now matches <code>region: north-europe</code>, ACM updates the PlacementDecision:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Clusters with <code>region: west-europe</code> are <strong>removed</strong> from the decision</p>
+</li>
+<li>
+<p>Clusters with <code>region: north-europe</code> are <strong>added</strong> to the decision</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The ApplicationSet detects the PlacementDecision change and:</p>
 </div>
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p>Delete the <code>demo-app-cluster-a</code> Application (Argo CD prunes all resources from cluster-a)</p>
+<p>Deletes the <code>demo-app-cluster-a</code> Application (Argo CD prunes all resources from cluster-a)</p>
 </li>
 <li>
-<p>Create a new <code>demo-app-cluster-b</code> Application (Argo CD syncs manifests to cluster-b)</p>
+<p>Creates a new <code>demo-app-cluster-b</code> Application (Argo CD syncs manifests to cluster-b)</p>
 </li>
 </ol>
 </div>
@@ -507,7 +521,7 @@ demo-app-6d4f5b7c8-r7t3p   1/1     Running   0          45s</code></pre>
 </div>
 <div class="listingblock console-output">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">demo-app-cluster-b   Synced   Healthy   default   https://github.com/.../multi-cluster-app-distribution-demo.git   00-current-state</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">demo-app-cluster-b   Synced   Healthy   default   https://github.com/.../multi-cluster-app-distribution-demo.git   kustomize/overlays/production</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -614,7 +628,7 @@ To delay automatic eviction (avoiding reaction to brief network disruptions), ad
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Manual pipeline reconfiguration</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Placement rules are YAML - change the label selector, ApplicationSet handles the rest</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Placement rules are declarative - patch the label selector, ApplicationSet handles the rest</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">No disaster recovery posture</p></td>
