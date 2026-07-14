@@ -1,0 +1,27 @@
+# kustomization.yaml
+# Purpose: Production overlay - sets replica count, adds TLS edge termination,
+# and applies the env:production label to all resources.
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+labels:
+  - pairs:
+      env: production
+patches:
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: demo-app
+      spec:
+        replicas: 2
+  - patch: |-
+      apiVersion: route.openshift.io/v1
+      kind: Route
+      metadata:
+        name: demo-app
+      spec:
+        tls:
+          termination: edge

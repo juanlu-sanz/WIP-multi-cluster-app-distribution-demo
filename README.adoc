@@ -42,6 +42,9 @@ The generated site is output to `gh-pages/`.
 | `01-acm-workload-placement/`
 | YAML manifests for Step 1 - ACM declarative placement
 
+| `kustomize/`
+| Kustomize base + overlays for the demo-app workload (used by the ApplicationSet)
+
 | `02-submariner-connectivity/`
 | YAML manifests for Step 2 - Submariner cross-cloud networking
 

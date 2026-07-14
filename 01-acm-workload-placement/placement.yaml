@@ -1,6 +1,8 @@
-# placement-cluster-a.yaml
-# Purpose: Initial Placement - deploys the application to cluster-a (west-europe).
-# To migrate the app to a different cluster, apply placement-cluster-b.yaml instead.
+# placement.yaml
+# Purpose: Selects which managed cluster receives the demo-app workload.
+# Initially targets cluster-a (west-europe). To migrate, patch the label
+# selector (e.g. region: north-europe) - ACM re-evaluates and the
+# ApplicationSet moves the workload automatically.
 apiVersion: cluster.open-cluster-management.io/v1beta1
 kind: Placement
 metadata:

@@ -163,12 +163,12 @@ acm-placement   1      30s
 
 *What:* Create a Placement that targets `cluster-a` (west-europe) and an ApplicationSet that deploys the application to whichever clusters that Placement selects.
 
-*Why:* This is the core of the GitOps-based deployment model. The Placement tells ACM which cluster should run the application. The ApplicationSet uses a `clusterDecisionResource` generator that reads from ACM's PlacementDecision - it knows which clusters are selected and generates one Argo CD Application per cluster. Argo CD then syncs the application manifests from Git to the target cluster.
+*Why:* This is the core of the GitOps-based deployment model. The Placement tells ACM which cluster should run the application. The ApplicationSet uses a `clusterDecisionResource` generator that reads from ACM's PlacementDecision - it knows which clusters are selected and generates one Argo CD Application per cluster. Argo CD then syncs the application manifests from the `kustomize/overlays/production` path in Git to the target cluster.
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-oc apply -f 01-acm-workload-placement/placement-cluster-a.yaml --context hub
+oc apply -f 01-acm-workload-placement/placement.yaml --context hub
 envsubst < 01-acm-workload-placement/applicationset.yaml | oc apply --context hub -f -
 ----
 
@@ -199,7 +199,7 @@ oc get applications.argoproj.io -n openshift-gitops --context hub | grep demo-ap
 [.console-output]
 [source,bash]
 ----
-demo-app-cluster-a   Synced   Healthy   default   https://github.com/.../multi-cluster-app-distribution-demo.git   00-current-state
+demo-app-cluster-a   Synced   Healthy   default   https://github.com/.../multi-cluster-app-distribution-demo.git   kustomize/overlays/production
 ----
 
 Check that ACM placed the workload on `cluster-a`:
@@ -240,20 +240,26 @@ demo-app-6d4f5b7c8-r7t3p   1/1     Running   0          45s
 [#migrate]
 === 5. Migrate the application to Cluster B
 
-*What:* Replace the Placement rule with one that targets `cluster-b` (north-europe) instead of `cluster-a` (west-europe).
+*What:* Patch the Placement to change the label selector from `region: west-europe` to `region: north-europe`, moving the application to cluster-b.
 
-*Why:* This is the migration itself - and the key difference from Step 0. Instead of logging into two clusters, re-applying manifests, updating DNS, and cleaning up the old deployment, we change a single YAML file. The ApplicationSet detects the PlacementDecision change, removes the Argo CD Application from cluster-a (pruning all resources), and creates a new Application on cluster-b.
+*Why:* This is the migration itself - and the key difference from Step 0. Instead of logging into two clusters, re-applying manifests, updating DNS, and cleaning up the old deployment, we patch a single Placement resource. ACM re-evaluates, updates the PlacementDecision, and the ApplicationSet automatically removes the Application from cluster-a (pruning all resources) and creates a new Application on cluster-b.
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-oc apply -f 01-acm-workload-placement/placement-cluster-b.yaml --context hub
+oc patch placement demo-app-placement -n openshift-gitops --context hub --type merge \
+  -p '{"spec":{"predicates":[{"requiredClusterSelector":{"labelSelector":{"matchLabels":{"region":"north-europe"}}}}]}}'
 ----
 
-This replaces the previous Placement that targeted `cluster-a` with one that targets `cluster-b`. The ApplicationSet will:
+The Placement re-evaluates. Since the selector now matches `region: north-europe`, ACM updates the PlacementDecision:
 
-. Delete the `demo-app-cluster-a` Application (Argo CD prunes all resources from cluster-a)
-. Create a new `demo-app-cluster-b` Application (Argo CD syncs manifests to cluster-b)
+* Clusters with `region: west-europe` are *removed* from the decision
+* Clusters with `region: north-europe` are *added* to the decision
+
+The ApplicationSet detects the PlacementDecision change and:
+
+. Deletes the `demo-app-cluster-a` Application (Argo CD prunes all resources from cluster-a)
+. Creates a new `demo-app-cluster-b` Application (Argo CD syncs manifests to cluster-b)
 
 .Verify: Application migrated to Cluster B
 [%collapsible]
@@ -285,7 +291,7 @@ oc get applications.argoproj.io -n openshift-gitops --context hub | grep demo-ap
 [.console-output]
 [source,bash]
 ----
-demo-app-cluster-b   Synced   Healthy   default   https://github.com/.../multi-cluster-app-distribution-demo.git   00-current-state
+demo-app-cluster-b   Synced   Healthy   default   https://github.com/.../multi-cluster-app-distribution-demo.git   kustomize/overlays/production
 ----
 
 Verify the pods are now running on Cluster B:
@@ -360,7 +366,7 @@ TIP: To delay automatic eviction (avoiding reaction to brief network disruptions
 | ACM Hub + Argo CD manages all clusters from one place
 
 | Manual pipeline reconfiguration
-| Placement rules are YAML - change the label selector, ApplicationSet handles the rest
+| Placement rules are declarative - patch the label selector, ApplicationSet handles the rest
 
 | No disaster recovery posture
 | Automatic failover when a cluster becomes unreachable; all state lives in Git

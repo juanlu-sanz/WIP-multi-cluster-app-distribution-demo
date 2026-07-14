@@ -17,6 +17,7 @@ This is a multi-cloud (Azure + AWS) demo for multi-cluster application distribut
 - YAML manifests live in the root step directories and are referenced directly from the AsciiDoc pages
 - `00-current-state/` simulates the current manual deployment problem (step zero)
 - `01-acm-workload-placement/` solves placement with ACM + OpenShift GitOps (ApplicationSet push model)
+- `kustomize/` contains base + overlays for the demo-app workload manifests (the ApplicationSet source path)
 - `02-submariner-connectivity/` deploys Submariner via ACM for encrypted cross-cloud (Azure to AWS) L3 connectivity
 - `03-service-mesh-traffic-management/` adds Service Mesh for networking and failover
 - `setup/` contains Terraform + post-install script for provisioning clusters (internal, not part of the demo)
@@ -71,4 +72,4 @@ This is a multi-cloud (Azure + AWS) demo for multi-cluster application distribut
 - Use `app.kubernetes.io/part-of: demo-app` label consistently
 - Include resource requests and limits on Deployments
 - Include readiness and liveness probes where applicable
-- YAML files live in the step directories (e.g. `00-current-state/`) and are referenced directly from the AsciiDoc pages
+- YAML files live in the step directories (e.g. `00-current-state/`) and `kustomize/` and are referenced directly from the AsciiDoc pages

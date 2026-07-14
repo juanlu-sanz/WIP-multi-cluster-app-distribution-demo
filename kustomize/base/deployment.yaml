@@ -1,0 +1,54 @@
+# deployment.yaml
+# Purpose: Base Deployment for the demo-app stateless HTTP workload.
+# Security-hardened following OpenShift restricted-v2 SCC best practices.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: demo-app
+    app.kubernetes.io/part-of: demo-app
+  name: demo-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: demo-app
+  template:
+    metadata:
+      labels:
+        app: demo-app
+    spec:
+      containers:
+        - name: demo-app
+          image: registry.access.redhat.com/ubi9/httpd-24:latest
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            initialDelaySeconds: 5
+            httpGet:
+              path: /
+              port: 8080
+          livenessProbe:
+            initialDelaySeconds: 10
+            httpGet:
+              path: /
+              port: 8080
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
+            allowPrivilegeEscalation: false
+          imagePullPolicy: Always
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
