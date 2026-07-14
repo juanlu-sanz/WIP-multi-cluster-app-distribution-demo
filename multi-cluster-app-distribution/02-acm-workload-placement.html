@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Multi-Cluster Application Distribution :: Multi-Cluster Application Distribution</title>
+    <link rel="canonical" href="https://redhat-scholars.github.io/multi-cluster-app-distribution-demo/multi-cluster-app-distribution/02-acm-workload-placement.html">
+    <link rel="prev" href="01-current-state.html">
+    <link rel="next" href="03-submariner-connectivity.html">
+    <meta name="generator" content="Antora 3.0.0">
+    <link rel="stylesheet" href="../_/css/site.css">
+  </head>
+  <body class="article">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="https://developers.redhat.com" target="_blank"><img src="../_/img/RHDLogo.svg" height="40px" alt="Red Hat Developer Program"></a>
+      <a class="navbar-item" style="font-size: 24px; color: white" href="https://redhat-scholars.github.io/multi-cluster-app-distribution-demo">Multi-Cluster Application Distribution</a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="https://developers.redhat.com/ebooks/" target="_blank">Books</a>
+        <a class="navbar-item" href="https://developers.redhat.com/cheatsheets/" target="_blank">Cheat Sheets</a>
+        <a class="navbar-item" href="https://developers.redhat.com/events/" target="_blank">Upcoming Events</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">More Tutorials</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="https://redhat-developer-demos.github.io/kubernetes-tutorial/" target="_blank">Kubernetes</a>
+            <a class="navbar-item" href="https://redhat-developer-demos.github.io/istio-tutorial/" target="_blank">Istio</a>
+            <a class="navbar-item" href="https://redhat-developer-demos.github.io/quarkus-tutorial/" target="_blank">Quarkus</a>
+            <a class="navbar-item" href="https://redhat-developer-demos.github.io/knative-tutorial/" target="_blank">Knative</a>
+            <a class="navbar-item" href="https://redhat-developer-demos.github.io/tekton-tutorial/" target="_blank">Tekton</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="multi-cluster-app-distribution" data-version="master">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="index.html"></a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="index.html">Overview</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="00-setup.html">Cluster Setup</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="00-setup.html#export-variables">Export Workshop Variables</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="00-setup.html#login-clusters">Log In to Clusters</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="00-setup.html#rename-contexts">Rename Contexts</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="01-current-state.html">Step 0: Current State</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="01-current-state.html#deploy-cluster-a">Deploy to Cluster A</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="01-current-state.html#migrate-cluster-b">Migrate to Cluster B</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="01-current-state.html#cleanup-cluster-a">Clean Up Cluster A</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="02-acm-workload-placement.html">Step 1: ACM Workload Placement</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="#label-clusters">Label Clusters</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="#create-clusterset">Create ManagedClusterSet</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="#deploy-acm-app">Deploy via ACM</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="#migrate">Migrate to Cluster B</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="03-submariner-connectivity.html">Step 2: Submariner Connectivity</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="03-submariner-connectivity.html#broker-namespace">Create Broker Namespace</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="03-submariner-connectivity.html#deploy-broker">Deploy Broker</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="03-submariner-connectivity.html#submariner-config">Configure Submariner</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="03-submariner-connectivity.html#deploy-addon">Deploy Add-on</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="03-submariner-connectivity.html#verify-connectivity">Verify Connectivity</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="04-service-mesh.html">Step 3: Service Mesh Traffic Management</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="04-service-mesh.html#install-istio">Install Istio</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="04-service-mesh.html#enroll-namespace">Enroll Namespace</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="04-service-mesh.html#waypoint">Deploy Waypoint</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="04-service-mesh.html#service-entry">ServiceEntry</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="04-service-mesh.html#virtual-service">VirtualService</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="04-service-mesh.html#blue-green">Blue-Green Migration</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="04-service-mesh.html#canary">Canary Shifting</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="04-service-mesh.html#mtls">Zero-Trust mTLS</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="index.html">Multi-Cluster Application Distribution</a></li>
+    <li><a href="02-acm-workload-placement.html">Step 1: ACM Workload Placement</a></li>
+  </ul>
+</nav>
+  <div class="edit-this-page"><a href="https://github.com/juanlu-sanz/WIP-multi-cluster-app-distribution-demo/edit/redhat-scholars-course/documentation/modules/ROOT/pages/02-acm-workload-placement.adoc">Edit this Page</a></div>
+  </div>
+  <div class="content">
+<article class="doc">
+<h1 class="page">Multi-Cluster Application Distribution</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>This step introduces Red Hat Advanced Cluster Management (ACM) to manage workload placement declaratively. Instead of manually deploying to individual clusters and reconfiguring pipelines, we define a <code>Placement</code> rule in YAML that tells ACM where the application should run. To migrate the application from one cluster to another, we simply update the placement rule - ACM handles the rest. Combined with OpenShift GitOps (Argo CD), the entire desired state lives in Git, providing both a single control plane for multi-cluster deployments and a foundation for disaster recovery.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_prerequisites"><a class="anchor" href="#_prerequisites"></a>Prerequisites</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p>ACM Hub cluster (OpenShift 4.15+) with ACM 2.10+ installed</p>
+</li>
+<li>
+<p>At least two managed clusters joined to the Hub (<code>cluster-a</code> and <code>cluster-b</code>)</p>
+</li>
+<li>
+<p>OpenShift GitOps Operator installed on the Hub</p>
+</li>
+<li>
+<p><code>oc</code> CLI authenticated as cluster-admin on the Hub cluster</p>
+</li>
+<li>
+<p>Contexts renamed as described in the <a href="00-setup.html" class="xref page">Cluster Setup</a> section</p>
+</li>
+<li>
+<p>Managed clusters labeled appropriately (see step 1 below)</p>
+</li>
+</ul>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+All commands in this step run on the Hub cluster (<code>--context hub</code>) unless a <code>--context cluster-a</code> or <code>--context cluster-b</code> flag specifies otherwise.
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_steps_to_apply"><a class="anchor" href="#_steps_to_apply"></a>Steps to Apply</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="label-clusters"><a class="anchor" href="#label-clusters"></a>1. Label your managed clusters</h3>
+<div class="paragraph">
+<p><strong>What:</strong> Assign region and environment labels to each managed cluster registered in ACM.</p>
+</div>
+<div class="paragraph">
+<p><strong>Why:</strong> ACM Placement rules select target clusters based on labels. By labeling clusters with <code>region</code> and <code>environment</code>, we can write placement rules like "deploy to the cluster in west-europe" - and later change to "deploy to north-europe" with a single YAML edit.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc label managedcluster cluster-a region=west-europe environment=production --overwrite --context hub
+oc label managedcluster cluster-b region=north-europe environment=production --overwrite --context hub</code></pre>
+</div>
+</div>
+<details>
+<summary class="title">Verify: Cluster labels applied</summary>
+<div class="content">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get managedclusters --show-labels --context hub</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">NAME        HUB ACCEPTED   MANAGED CLUSTER URLS                  JOINED   AVAILABLE   AGE   LABELS
+cluster-a   true           https://api.cluster-a.example.com     True     True        10d   environment=production,region=west-europe,...
+cluster-b   true           https://api.cluster-b.example.com     True     True        10d   environment=production,region=north-europe,...</code></pre>
+</div>
+</div>
+</div>
+</details>
+<hr>
+</div>
+<div class="sect2">
+<h3 id="create-clusterset"><a class="anchor" href="#create-clusterset"></a>2. Create the ManagedClusterSet</h3>
+<div class="paragraph">
+<p><strong>What:</strong> Group the managed clusters into a <code>ManagedClusterSet</code> and bind it to the ACM application namespace.</p>
+</div>
+<div class="paragraph">
+<p><strong>Why:</strong> A ManagedClusterSet defines the pool of clusters that Placement rules can select from. The binding allows resources in the <code>demo-app-acm</code> namespace to reference this set. Without the binding, the Placement has no clusters to choose from.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc apply -f 01-acm-workload-placement/managedclusterset.yaml --context hub
+oc apply -f 01-acm-workload-placement/managedclusterset-binding.yaml --context hub</code></pre>
+</div>
+</div>
+<details>
+<summary class="title">Verify: ManagedClusterSet created and bound</summary>
+<div class="content">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get managedclusterset production-clusters --context hub</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">NAME                   EMPTY   AGE
+production-clusters    False   10s</code></pre>
+</div>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get managedclustersetbinding -n demo-app-acm --context hub</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">NAME                   CLUSTERSET            AGE
+production-clusters    production-clusters   10s</code></pre>
+</div>
+</div>
+</div>
+</details>
+<hr>
+</div>
+<div class="sect2">
+<h3 id="deploy-acm-app"><a class="anchor" href="#deploy-acm-app"></a>3. Create the Namespace, Channel, Placement, and Subscription</h3>
+<div class="paragraph">
+<p><strong>What:</strong> Deploy the ACM application lifecycle resources: a Namespace for ACM control objects, a Channel pointing to the Git repo with the app manifests, a Placement rule targeting <code>cluster-a</code>, and a Subscription that ties them together.</p>
+</div>
+<div class="paragraph">
+<p><strong>Why:</strong> This is the core of ACM application deployment. The Channel tells ACM where the manifests live (Git). The Placement tells ACM which cluster to deploy to. The Subscription connects them - "deploy the manifests from this Channel to whichever cluster the Placement selects." From this point on, placement is declarative: change the Placement YAML, and ACM moves the application.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc apply -f 01-acm-workload-placement/namespace.yaml --context hub
+envsubst &lt; 01-acm-workload-placement/channel.yaml | oc apply --context hub -f -
+oc apply -f 01-acm-workload-placement/placement-cluster-a.yaml --context hub
+oc apply -f 01-acm-workload-placement/subscription.yaml --context hub</code></pre>
+</div>
+</div>
+<details>
+<summary class="title">Verify: Application deployed to Cluster A via ACM</summary>
+<div class="content">
+<div class="paragraph">
+<p>Check the Subscription status on the Hub:</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get subscription demo-app-subscription -n demo-app-acm --context hub</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">NAME                     STATUS       AGE
+demo-app-subscription    Propagated   30s</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Check that ACM placed the workload on <code>cluster-a</code>:</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get placementdecision -n demo-app-acm --context hub -o yaml | grep -A5 "decisions:"</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">  decisions:
+    - clusterName: cluster-a
+      reason: ""</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Verify the pods are running on Cluster A:</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get pods -n demo-app --context cluster-a</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">NAME                        READY   STATUS    RESTARTS   AGE
+demo-app-6d4f5b7c8-x9k2m   1/1     Running   0          45s
+demo-app-6d4f5b7c8-r7t3p   1/1     Running   0          45s</code></pre>
+</div>
+</div>
+</div>
+</details>
+<hr>
+</div>
+<div class="sect2">
+<h3 id="migrate"><a class="anchor" href="#migrate"></a>4. Migrate the application to Cluster B</h3>
+<div class="paragraph">
+<p><strong>What:</strong> Replace the Placement rule with one that targets <code>cluster-b</code> (north-europe) instead of <code>cluster-a</code> (west-europe).</p>
+</div>
+<div class="paragraph">
+<p><strong>Why:</strong> This is the migration itself - and the key difference from Step 0. Instead of logging into two clusters, re-applying manifests, updating DNS, and cleaning up the old deployment, we change a single YAML file. ACM deploys the application to cluster-b and removes it from cluster-a automatically.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc apply -f 01-acm-workload-placement/placement-cluster-b.yaml --context hub</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This replaces the previous Placement that targeted <code>cluster-a</code> with one that targets <code>cluster-b</code>. ACM will:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Deploy the application to <code>cluster-b</code></p>
+</li>
+<li>
+<p>Remove it from <code>cluster-a</code></p>
+</li>
+</ol>
+</div>
+<details>
+<summary class="title">Verify: Application migrated to Cluster B</summary>
+<div class="content">
+<div class="paragraph">
+<p>Check the updated PlacementDecision:</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get placementdecision -n demo-app-acm --context hub -o yaml | grep -A5 "decisions:"</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">  decisions:
+    - clusterName: cluster-b
+      reason: ""</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Verify the pods are now running on Cluster B:</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get pods -n demo-app --context cluster-b</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">NAME                        READY   STATUS    RESTARTS   AGE
+demo-app-6d4f5b7c8-k8m2n   1/1     Running   0          30s
+demo-app-6d4f5b7c8-p4q7r   1/1     Running   0          30s</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Verify the pods are gone from Cluster A:</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get pods -n demo-app --context cluster-a</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">No resources found in demo-app namespace.</code></pre>
+</div>
+</div>
+</div>
+</details>
+<details>
+<summary class="title">Verify: Route accessible on Cluster B</summary>
+<div class="content">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">curl -sk https://$(oc get route demo-app -n demo-app --context cluster-b -o jsonpath='{.status.ingress[0].host}')</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{"message": "Hello from demo-app", "version": "1.0.0"}</code></pre>
+</div>
+</div>
+</div>
+</details>
+<hr>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_what_this_solves_compared_to_step_0"><a class="anchor" href="#_what_this_solves_compared_to_step_0"></a>What This Solves (Compared to Step 0)</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 40%;">
+<col style="width: 60%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Problem from Step 0</th>
+<th class="tableblock halign-left valign-top">How ACM Solves It</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No single control plane</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">ACM Hub manages all clusters from one place</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Manual pipeline reconfiguration</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Placement rules are YAML - change the label selector, ACM handles the rest</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No disaster recovery posture</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">All placement rules live in Git - rebuild from Git if the Hub goes down</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Manual process at scale</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">One <code>Placement</code> change moves the app across any number of clusters</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_what_this_does_not_solve_yet"><a class="anchor" href="#_what_this_does_not_solve_yet"></a>What This Does NOT Solve (Yet)</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 40%;">
+<col style="width: 60%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Remaining Problem</th>
+<th class="tableblock halign-left valign-top">Addressed In</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No network path between clouds (Azure to AWS)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="03-submariner-connectivity.html" class="xref page">Step 2 - Submariner</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">DNS/Route changes on migration</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="04-service-mesh.html" class="xref page">Step 3 - Service Mesh</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No gradual traffic shifting</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="04-service-mesh.html" class="xref page">Step 3 - Service Mesh</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Zero-trust inter-service communication</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><a href="04-service-mesh.html" class="xref page">Step 3 - Service Mesh</a></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_official_documentation"><a class="anchor" href="#_official_documentation"></a>Official Documentation</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p><a href="https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.11/html/applications/managing-applications">ACM Application Lifecycle Management</a></p>
+</li>
+<li>
+<p><a href="https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.11/html/clusters/cluster_mce_overview#placement-overview">Placement API Overview</a></p>
+</li>
+<li>
+<p><a href="https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.11/html/clusters/cluster_mce_overview#managedclustersets-intro">ManagedClusterSets</a></p>
+</li>
+<li>
+<p><a href="https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.11/html/applications/managing-applications#managing-subscriptions">Subscriptions</a></p>
+</li>
+<li>
+<p><a href="https://docs.redhat.com/en/documentation/red_hat_openshift_gitops/1.14/html/understanding_openshift_gitops/index">OpenShift GitOps Operator</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_alternatives_considered"><a class="anchor" href="#_alternatives_considered"></a>Alternatives Considered</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 66.6667%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Approach</th>
+<th class="tableblock halign-left valign-top">Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">ACM Placement (this solution)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Declarative, GitOps-native, single control plane for placement across all clusters. Requires ACM Hub.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Manual <code>oc apply</code> per cluster</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Current state (Step 0). Simple but does not scale and creates operational burden.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">ArgoCD ApplicationSets with cluster generators</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Can deploy to multiple clusters from a single Argo CD instance, but lacks ACM&#8217;s policy engine and cluster lifecycle management.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Hive + ClusterDeployments</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Useful for cluster provisioning, not specifically for application placement.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<nav class="pagination">
+  <span class="prev"><a href="01-current-state.html">Step 0: Current State</a></span>
+  <span class="next"><a href="03-submariner-connectivity.html">Step 2: Submariner Connectivity</a></span>
+</nav>
+</article>
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <a class="rhd-logo" href="https://developers.redhat.com" target="_blank"></div>
+</footer>
+<script src="../_/js/vendor/clipboard.js"></script>
+<script src="../_/js/site.js"></script>
+<script async src="../_/js/vendor/highlight.js"></script>
+  </body>
+</html>

@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Multi-Cluster Application Distribution :: Multi-Cluster Application Distribution</title>
+    <link rel="canonical" href="https://redhat-scholars.github.io/multi-cluster-app-distribution-demo/multi-cluster-app-distribution/00-setup.html">
+    <link rel="prev" href="index.html">
+    <link rel="next" href="01-current-state.html">
+    <meta name="generator" content="Antora 3.0.0">
+    <link rel="stylesheet" href="../_/css/site.css">
+  </head>
+  <body class="article">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="https://developers.redhat.com" target="_blank"><img src="../_/img/RHDLogo.svg" height="40px" alt="Red Hat Developer Program"></a>
+      <a class="navbar-item" style="font-size: 24px; color: white" href="https://redhat-scholars.github.io/multi-cluster-app-distribution-demo">Multi-Cluster Application Distribution</a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="https://developers.redhat.com/ebooks/" target="_blank">Books</a>
+        <a class="navbar-item" href="https://developers.redhat.com/cheatsheets/" target="_blank">Cheat Sheets</a>
+        <a class="navbar-item" href="https://developers.redhat.com/events/" target="_blank">Upcoming Events</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">More Tutorials</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="https://redhat-developer-demos.github.io/kubernetes-tutorial/" target="_blank">Kubernetes</a>
+            <a class="navbar-item" href="https://redhat-developer-demos.github.io/istio-tutorial/" target="_blank">Istio</a>
+            <a class="navbar-item" href="https://redhat-developer-demos.github.io/quarkus-tutorial/" target="_blank">Quarkus</a>
+            <a class="navbar-item" href="https://redhat-developer-demos.github.io/knative-tutorial/" target="_blank">Knative</a>
+            <a class="navbar-item" href="https://redhat-developer-demos.github.io/tekton-tutorial/" target="_blank">Tekton</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="multi-cluster-app-distribution" data-version="master">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="index.html"></a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="index.html">Overview</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="00-setup.html">Cluster Setup</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="#export-variables">Export Workshop Variables</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="#login-clusters">Log In to Clusters</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="#rename-contexts">Rename Contexts</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="01-current-state.html">Step 0: Current State</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="01-current-state.html#deploy-cluster-a">Deploy to Cluster A</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="01-current-state.html#migrate-cluster-b">Migrate to Cluster B</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="01-current-state.html#cleanup-cluster-a">Clean Up Cluster A</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="02-acm-workload-placement.html">Step 1: ACM Workload Placement</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="02-acm-workload-placement.html#label-clusters">Label Clusters</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="02-acm-workload-placement.html#create-clusterset">Create ManagedClusterSet</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="02-acm-workload-placement.html#deploy-acm-app">Deploy via ACM</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="02-acm-workload-placement.html#migrate">Migrate to Cluster B</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="03-submariner-connectivity.html">Step 2: Submariner Connectivity</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="03-submariner-connectivity.html#broker-namespace">Create Broker Namespace</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="03-submariner-connectivity.html#deploy-broker">Deploy Broker</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="03-submariner-connectivity.html#submariner-config">Configure Submariner</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="03-submariner-connectivity.html#deploy-addon">Deploy Add-on</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="03-submariner-connectivity.html#verify-connectivity">Verify Connectivity</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="04-service-mesh.html">Step 3: Service Mesh Traffic Management</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="04-service-mesh.html#install-istio">Install Istio</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="04-service-mesh.html#enroll-namespace">Enroll Namespace</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="04-service-mesh.html#waypoint">Deploy Waypoint</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="04-service-mesh.html#service-entry">ServiceEntry</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="04-service-mesh.html#virtual-service">VirtualService</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="04-service-mesh.html#blue-green">Blue-Green Migration</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="04-service-mesh.html#canary">Canary Shifting</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="04-service-mesh.html#mtls">Zero-Trust mTLS</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="index.html">Multi-Cluster Application Distribution</a></li>
+    <li><a href="00-setup.html">Cluster Setup</a></li>
+  </ul>
+</nav>
+  <div class="edit-this-page"><a href="https://github.com/juanlu-sanz/WIP-multi-cluster-app-distribution-demo/edit/redhat-scholars-course/documentation/modules/ROOT/pages/00-setup.adoc">Edit this Page</a></div>
+  </div>
+  <div class="content">
+<article class="doc">
+<h1 class="page">Multi-Cluster Application Distribution</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>Before starting the tutorial, log in to all three clusters, rename the contexts, and export the workshop variables. This only needs to be done once per terminal session.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+If you used <code>setup/post-install.sh</code>, the contexts and logins are already configured.
+</td>
+</tr>
+</table>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<strong>Red Hatters:</strong> To provision the clusters from scratch, see the <code>setup/</code> directory for Terraform automation (ARO on Azure + ROSA HCP on AWS). The setup script also installs all required operators and configures the contexts below.
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="prerequisites"><a class="anchor" href="#prerequisites"></a>Prerequisites</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p>An ACM Hub cluster with at least two managed clusters joined (Hub + Cluster A on Azure, Cluster B on AWS)</p>
+</li>
+<li>
+<p><code>oc</code> CLI authenticated as cluster-admin on the Hub</p>
+</li>
+<li>
+<p>Cluster admin access to both managed clusters</p>
+</li>
+<li>
+<p>OpenShift GitOps Operator installed on the Hub (for step 01+)</p>
+</li>
+<li>
+<p>Cloud provider credentials for both managed clusters (for step 02 - Submariner)</p>
+</li>
+<li>
+<p>OpenShift Service Mesh 3.0+ Operator installed on all clusters (for step 03)</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="export-variables"><a class="anchor" href="#export-variables"></a>1. Export workshop variables</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Fill in your values and export them. These variables are referenced by YAML files in this repo and substituted at apply time via <code>envsubst</code>.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">export HUB_API_URL="https://api.hub.example.com:6443"
+export CLUSTER_A_API_URL="https://api.cluster-a.example.com:6443"
+export CLUSTER_B_API_URL="https://api.cluster-b.example.com:6443"
+export GIT_ORG="your-github-org"
+export REMOTE_INGRESS_IP="10.0.0.1"</code></pre>
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 25%;">
+<col style="width: 50%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Variable</th>
+<th class="tableblock halign-left valign-top">Used in</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>HUB_API_URL</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">This page (login)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">API server URL for the ACM Hub cluster (Azure)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>CLUSTER_A_API_URL</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">This page (login)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">API server URL for the first managed cluster (Azure)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>CLUSTER_B_API_URL</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">This page (login)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">API server URL for the second managed cluster (AWS)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>GIT_ORG</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>01-acm-workload-placement/channel.yaml</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">GitHub org/user for the ACM Channel Git repository</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>REMOTE_INGRESS_IP</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>03-service-mesh-traffic-management/service-entry.yaml</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Ingress gateway IP of the peer cluster for cross-cluster mesh routing. With Submariner (Step 2), this can be an internal cluster IP reachable through the tunnel.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="login-clusters"><a class="anchor" href="#login-clusters"></a>2. Log in to each cluster</h2>
+<div class="sectionbody">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc login --server=$HUB_API_URL
+oc login --server=$CLUSTER_A_API_URL
+oc login --server=$CLUSTER_B_API_URL</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="rename-contexts"><a class="anchor" href="#rename-contexts"></a>3. Rename the contexts</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The default context names are long and auto-generated. Rename them to <code>hub</code>, <code>cluster-a</code>, and <code>cluster-b</code>:</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc config rename-context &lt;HUB_CONTEXT_NAME&gt; hub
+oc config rename-context &lt;CLUSTER_A_CONTEXT_NAME&gt; cluster-a
+oc config rename-context &lt;CLUSTER_B_CONTEXT_NAME&gt; cluster-b</code></pre>
+</div>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+Run <code>oc config get-contexts</code> after each login to see the auto-generated context name and use it in the rename command.
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="verify-contexts"><a class="anchor" href="#verify-contexts"></a>4. Verify</h2>
+<div class="sectionbody">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc config get-contexts</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">CURRENT   NAME        CLUSTER                    AUTHINFO
+          hub         api-hub:6443               admin/api-hub:6443
+          cluster-a   api-cluster-a:6443         admin/api-cluster-a:6443
+*         cluster-b   api-cluster-b:6443         admin/api-cluster-b:6443</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>From this point on, every <code>oc</code> command in the workshop uses <code>--context hub</code>, <code>--context cluster-a</code>, or <code>--context cluster-b</code> explicitly, so you never need to switch your active context. YAML files with <code>${VARIABLE}</code> placeholders are piped through <code>envsubst</code> before applying.</p>
+</div>
+</div>
+</div>
+<nav class="pagination">
+  <span class="prev"><a href="index.html">Overview</a></span>
+  <span class="next"><a href="01-current-state.html">Step 0: Current State</a></span>
+</nav>
+</article>
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <a class="rhd-logo" href="https://developers.redhat.com" target="_blank"></div>
+</footer>
+<script src="../_/js/vendor/clipboard.js"></script>
+<script src="../_/js/site.js"></script>
+<script async src="../_/js/vendor/highlight.js"></script>
+  </body>
+</html>

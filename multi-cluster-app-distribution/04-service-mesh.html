@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Multi-Cluster Application Distribution :: Multi-Cluster Application Distribution</title>
+    <link rel="canonical" href="https://redhat-scholars.github.io/multi-cluster-app-distribution-demo/multi-cluster-app-distribution/04-service-mesh.html">
+    <link rel="prev" href="03-submariner-connectivity.html">
+    <meta name="generator" content="Antora 3.0.0">
+    <link rel="stylesheet" href="../_/css/site.css">
+  </head>
+  <body class="article">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="https://developers.redhat.com" target="_blank"><img src="../_/img/RHDLogo.svg" height="40px" alt="Red Hat Developer Program"></a>
+      <a class="navbar-item" style="font-size: 24px; color: white" href="https://redhat-scholars.github.io/multi-cluster-app-distribution-demo">Multi-Cluster Application Distribution</a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="https://developers.redhat.com/ebooks/" target="_blank">Books</a>
+        <a class="navbar-item" href="https://developers.redhat.com/cheatsheets/" target="_blank">Cheat Sheets</a>
+        <a class="navbar-item" href="https://developers.redhat.com/events/" target="_blank">Upcoming Events</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">More Tutorials</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="https://redhat-developer-demos.github.io/kubernetes-tutorial/" target="_blank">Kubernetes</a>
+            <a class="navbar-item" href="https://redhat-developer-demos.github.io/istio-tutorial/" target="_blank">Istio</a>
+            <a class="navbar-item" href="https://redhat-developer-demos.github.io/quarkus-tutorial/" target="_blank">Quarkus</a>
+            <a class="navbar-item" href="https://redhat-developer-demos.github.io/knative-tutorial/" target="_blank">Knative</a>
+            <a class="navbar-item" href="https://redhat-developer-demos.github.io/tekton-tutorial/" target="_blank">Tekton</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="multi-cluster-app-distribution" data-version="master">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="index.html"></a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="index.html">Overview</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="00-setup.html">Cluster Setup</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="00-setup.html#export-variables">Export Workshop Variables</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="00-setup.html#login-clusters">Log In to Clusters</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="00-setup.html#rename-contexts">Rename Contexts</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="01-current-state.html">Step 0: Current State</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="01-current-state.html#deploy-cluster-a">Deploy to Cluster A</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="01-current-state.html#migrate-cluster-b">Migrate to Cluster B</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="01-current-state.html#cleanup-cluster-a">Clean Up Cluster A</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="02-acm-workload-placement.html">Step 1: ACM Workload Placement</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="02-acm-workload-placement.html#label-clusters">Label Clusters</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="02-acm-workload-placement.html#create-clusterset">Create ManagedClusterSet</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="02-acm-workload-placement.html#deploy-acm-app">Deploy via ACM</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="02-acm-workload-placement.html#migrate">Migrate to Cluster B</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="03-submariner-connectivity.html">Step 2: Submariner Connectivity</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="03-submariner-connectivity.html#broker-namespace">Create Broker Namespace</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="03-submariner-connectivity.html#deploy-broker">Deploy Broker</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="03-submariner-connectivity.html#submariner-config">Configure Submariner</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="03-submariner-connectivity.html#deploy-addon">Deploy Add-on</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="03-submariner-connectivity.html#verify-connectivity">Verify Connectivity</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <a class="nav-link" href="04-service-mesh.html">Step 3: Service Mesh Traffic Management</a>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="#install-istio">Install Istio</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="#enroll-namespace">Enroll Namespace</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="#waypoint">Deploy Waypoint</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="#service-entry">ServiceEntry</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="#virtual-service">VirtualService</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="#blue-green">Blue-Green Migration</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="#canary">Canary Shifting</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="#mtls">Zero-Trust mTLS</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="index.html">Multi-Cluster Application Distribution</a></li>
+    <li><a href="04-service-mesh.html">Step 3: Service Mesh Traffic Management</a></li>
+  </ul>
+</nav>
+  <div class="edit-this-page"><a href="https://github.com/juanlu-sanz/WIP-multi-cluster-app-distribution-demo/edit/redhat-scholars-course/documentation/modules/ROOT/pages/04-service-mesh.adoc">Edit this Page</a></div>
+  </div>
+  <div class="content">
+<article class="doc">
+<h1 class="page">Multi-Cluster Application Distribution</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>This step adds OpenShift Service Mesh 3.0+ (Istio ambient mode) on top of the ACM placement from <a href="02-acm-workload-placement.html" class="xref page">Step 1</a> and the Submariner connectivity from <a href="03-submariner-connectivity.html" class="xref page">Step 2</a>. With Service Mesh, traffic routing is decoupled from the underlying cluster and cloud provider - consumers hit a stable service endpoint, and the mesh transparently routes traffic to whichever cluster is currently running the workload, whether it&#8217;s on Azure or AWS. This enables zero-downtime migrations, blue-green failover, canary traffic shifting, and zero-trust mutual TLS between services - all without changing DNS records or load balancers.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_prerequisites"><a class="anchor" href="#_prerequisites"></a>Prerequisites</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p>ACM Hub cluster with workload placement from <a href="02-acm-workload-placement.html" class="xref page">Step 1</a> fully operational</p>
+</li>
+<li>
+<p>Submariner cross-cloud connectivity from <a href="03-submariner-connectivity.html" class="xref page">Step 2</a> verified and working</p>
+</li>
+<li>
+<p>At least two managed clusters (<code>cluster-a</code> on Azure, <code>cluster-b</code> on AWS) joined to the Hub</p>
+</li>
+<li>
+<p>OpenShift Service Mesh 3.0+ Operator installed on all participating clusters (Hub + managed)</p>
+</li>
+<li>
+<p><code>oc</code> CLI authenticated as cluster-admin on the Hub cluster</p>
+</li>
+<li>
+<p>Contexts renamed as described in the <a href="00-setup.html" class="xref page">Cluster Setup</a> section</p>
+</li>
+</ul>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+Cross-cluster network connectivity is provided by Submariner (Step 2). The <code>$REMOTE_INGRESS_IP</code> used in the ServiceEntry can be an internal cluster IP because Submariner&#8217;s IPsec tunnel makes it reachable across Azure and AWS.
+</td>
+</tr>
+</table>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+Service Mesh resources are applied directly on the managed clusters. Every <code>oc</code> command specifies <code>--context cluster-a</code> or <code>--context cluster-b</code> explicitly.
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_steps_to_apply"><a class="anchor" href="#_steps_to_apply"></a>Steps to Apply</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="install-istio"><a class="anchor" href="#install-istio"></a>1. Install the Istio control plane in ambient mode</h3>
+<div class="paragraph">
+<p><strong>What:</strong> Deploy the Istio control plane using the ambient profile, which installs a ztunnel DaemonSet on every node for Layer 4 traffic interception.</p>
+</div>
+<div class="paragraph">
+<p><strong>Why:</strong> Ambient mode replaces the traditional sidecar model (one envoy container per pod) with a per-node proxy. This reduces resource overhead and simplifies adoption - existing workloads join the mesh without restarting or injecting sidecars. The ztunnel handles mTLS and Layer 4 routing transparently.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc apply -f 03-service-mesh-traffic-management/istio.yaml --context cluster-a
+oc apply -f 03-service-mesh-traffic-management/istio.yaml --context cluster-b</code></pre>
+</div>
+</div>
+<details>
+<summary class="title">Verify: Istio control plane running</summary>
+<div class="content">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get istio default -n istio-system --context cluster-a</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS   AGE
+default   1           1       1        default            Healthy  60s</code></pre>
+</div>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get daemonset ztunnel -n istio-system --context cluster-a</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">NAME      DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   AGE
+ztunnel   3         3         3       3             3           45s</code></pre>
+</div>
+</div>
+</div>
+</details>
+<hr>
+</div>
+<div class="sect2">
+<h3 id="enroll-namespace"><a class="anchor" href="#enroll-namespace"></a>2. Enroll the application namespace into the mesh</h3>
+<div class="paragraph">
+<p><strong>What:</strong> Label the <code>demo-app</code> namespace with <code>istio.io/dataplane-mode=ambient</code> on both managed clusters.</p>
+</div>
+<div class="paragraph">
+<p><strong>Why:</strong> In ambient mode, the mesh is opt-in at the namespace level. Adding this label tells the ztunnel DaemonSet to intercept traffic for all pods in this namespace - enabling mTLS encryption and Layer 4 policy enforcement without any changes to the application itself.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc label namespace demo-app istio.io/dataplane-mode=ambient --context cluster-a --overwrite
+oc label namespace demo-app istio.io/dataplane-mode=ambient --context cluster-b --overwrite</code></pre>
+</div>
+</div>
+<details>
+<summary class="title">Verify: Namespace enrolled in the mesh</summary>
+<div class="content">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get namespace demo-app --show-labels --context cluster-a | grep istio</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">istio.io/dataplane-mode=ambient</code></pre>
+</div>
+</div>
+</div>
+</details>
+<hr>
+</div>
+<div class="sect2">
+<h3 id="waypoint"><a class="anchor" href="#waypoint"></a>3. Deploy the waypoint proxy for Layer 7 capabilities</h3>
+<div class="paragraph">
+<p><strong>What:</strong> Deploy a waypoint Gateway resource in the <code>demo-app</code> namespace on both clusters.</p>
+</div>
+<div class="paragraph">
+<p><strong>Why:</strong> Ambient mode only provides Layer 4 (TCP) traffic management by default. For HTTP-level routing - which we need for weighted traffic splits, canary deployments, and header-based matching - a waypoint proxy must be deployed. The waypoint is a lightweight envoy instance that handles Layer 7 for the specific namespace, without requiring sidecars in every pod.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc apply -f 03-service-mesh-traffic-management/waypoint.yaml --context cluster-a
+oc apply -f 03-service-mesh-traffic-management/waypoint.yaml --context cluster-b</code></pre>
+</div>
+</div>
+<details>
+<summary class="title">Verify: Waypoint proxy running</summary>
+<div class="content">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get gateway demo-app-waypoint -n demo-app --context cluster-a</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">NAME                CLASS   ADDRESS         PROGRAMMED   AGE
+demo-app-waypoint   istio   10.96.xxx.xxx   True         30s</code></pre>
+</div>
+</div>
+</div>
+</details>
+<hr>
+</div>
+<div class="sect2">
+<h3 id="service-entry"><a class="anchor" href="#service-entry"></a>4. Apply the cross-cluster ServiceEntry</h3>
+<div class="paragraph">
+<p><strong>What:</strong> Create a ServiceEntry that registers the remote cluster&#8217;s demo-app as a mesh-internal service accessible via <code>demo-app.demo-app.global</code>.</p>
+</div>
+<div class="paragraph">
+<p><strong>Why:</strong> By default, each cluster&#8217;s mesh only knows about local services. The ServiceEntry tells the mesh "there is a service called <code>demo-app.demo-app.global</code> that can be reached locally and also at the remote cluster&#8217;s ingress." This is what enables cross-cluster traffic routing - without it, the VirtualService would have nowhere to route traffic.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">envsubst &lt; 03-service-mesh-traffic-management/service-entry.yaml | oc apply --context cluster-a -f -
+envsubst &lt; 03-service-mesh-traffic-management/service-entry.yaml | oc apply --context cluster-b -f -</code></pre>
+</div>
+</div>
+<details>
+<summary class="title">Verify: ServiceEntry created</summary>
+<div class="content">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get serviceentry -n demo-app --context cluster-a</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">NAME                    HOSTS                           LOCATION      RESOLUTION   AGE
+demo-app-cross-cluster  ["demo-app.demo-app.global"]    MESH_INTERNAL DNS          15s</code></pre>
+</div>
+</div>
+</div>
+</details>
+<hr>
+</div>
+<div class="sect2">
+<h3 id="virtual-service"><a class="anchor" href="#virtual-service"></a>5. Apply the VirtualService for traffic routing</h3>
+<div class="paragraph">
+<p><strong>What:</strong> Create a VirtualService that controls how traffic to <code>demo-app.demo-app.global</code> is distributed. Start with 100% to cluster-a.</p>
+</div>
+<div class="paragraph">
+<p><strong>Why:</strong> The VirtualService is the traffic control layer. It decouples the service consumers from the physical cluster - they always call <code>demo-app.demo-app.global</code>, and the VirtualService decides which cluster actually serves the request. This is what eliminates DNS changes on migration: the endpoint stays the same, only the routing weights change.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc apply -f 03-service-mesh-traffic-management/virtualservice-100-cluster-a.yaml --context cluster-a</code></pre>
+</div>
+</div>
+<details>
+<summary class="title">Verify: VirtualService active</summary>
+<div class="content">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get virtualservice demo-app-routing -n demo-app --context cluster-a</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">NAME               GATEWAYS   HOSTS                        AGE
+demo-app-routing              ["demo-app.demo-app.global"] 10s</code></pre>
+</div>
+</div>
+</div>
+</details>
+<hr>
+</div>
+<div class="sect2">
+<h3 id="_6_apply_the_destinationrule_for_cluster_specific_subsets"><a class="anchor" href="#_6_apply_the_destinationrule_for_cluster_specific_subsets"></a>6. Apply the DestinationRule for cluster-specific subsets</h3>
+<div class="paragraph">
+<p><strong>What:</strong> Create a DestinationRule that defines named subsets (<code>cluster-a</code>, <code>cluster-b</code>) based on endpoint labels, with mTLS enabled.</p>
+</div>
+<div class="paragraph">
+<p><strong>Why:</strong> The VirtualService routes to named subsets - this DestinationRule maps those names to actual endpoints. It also enforces <code>ISTIO_MUTUAL</code> TLS, ensuring all cross-cluster traffic is encrypted and mutually authenticated. Without this, the VirtualService has no way to distinguish between cluster-a and cluster-b endpoints.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc apply -f 03-service-mesh-traffic-management/destination-rule.yaml --context cluster-a</code></pre>
+</div>
+</div>
+<details>
+<summary class="title">Verify: DestinationRule created</summary>
+<div class="content">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get destinationrule demo-app-dr -n demo-app --context cluster-a</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">NAME          HOST                       AGE
+demo-app-dr   demo-app.demo-app.global   10s</code></pre>
+</div>
+</div>
+</div>
+</details>
+<hr>
+</div>
+<div class="sect2">
+<h3 id="blue-green"><a class="anchor" href="#blue-green"></a>7. Perform a blue-green migration</h3>
+<div class="paragraph">
+<p><strong>What:</strong> Switch 100% of traffic from cluster-a to cluster-b by applying an updated VirtualService.</p>
+</div>
+<div class="paragraph">
+<p><strong>Why:</strong> This is the full migration, combined with ACM placement from Step 1. ACM has already deployed the workload to cluster-b - now we shift all traffic there in one step. Because the consumers still call <code>demo-app.demo-app.global</code>, they experience zero downtime and no URL change. This is the blue-green switch that was impossible in Step 0.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc apply -f 03-service-mesh-traffic-management/virtualservice-100-cluster-b.yaml --context cluster-a</code></pre>
+</div>
+</div>
+<details>
+<summary class="title">Verify: Traffic now routed to Cluster B</summary>
+<div class="content">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get virtualservice demo-app-routing -n demo-app --context cluster-a -o yaml | grep -A10 "route:"</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">    route:
+      - destination:
+          host: demo-app.demo-app.global
+          subset: cluster-b
+        weight: 100</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Test end-to-end connectivity:</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">curl -s http://demo-app.demo-app.global</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{"message": "Hello from demo-app", "version": "1.0.0"}</code></pre>
+</div>
+</div>
+</div>
+</details>
+<hr>
+</div>
+<div class="sect2">
+<h3 id="canary"><a class="anchor" href="#canary"></a>8. (Optional) Canary traffic shifting</h3>
+<div class="paragraph">
+<p><strong>What:</strong> Instead of an all-at-once switch, apply a VirtualService that sends 90% of traffic to cluster-a and 10% to cluster-b.</p>
+</div>
+<div class="paragraph">
+<p><strong>Why:</strong> Canary shifting lets you validate the new cluster with real production traffic before committing to a full migration. If something goes wrong on cluster-b, only 10% of users are affected and you can instantly roll back by reapplying the 100%-cluster-a VirtualService.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc apply -f 03-service-mesh-traffic-management/virtualservice-canary-90-10.yaml --context cluster-a</code></pre>
+</div>
+</div>
+<details>
+<summary class="title">Verify: Canary traffic split active</summary>
+<div class="content">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get virtualservice demo-app-routing -n demo-app --context cluster-a -o yaml | grep -A15 "route:"</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">    route:
+      - destination:
+          host: demo-app.demo-app.global
+          subset: cluster-a
+        weight: 90
+      - destination:
+          host: demo-app.demo-app.global
+          subset: cluster-b
+        weight: 10</code></pre>
+</div>
+</div>
+</div>
+</details>
+<hr>
+</div>
+<div class="sect2">
+<h3 id="mtls"><a class="anchor" href="#mtls"></a>9. Apply the PeerAuthentication for zero-trust mTLS</h3>
+<div class="paragraph">
+<p><strong>What:</strong> Enforce STRICT mutual TLS for the <code>demo-app</code> namespace on both clusters, requiring all communication to present a valid mesh identity.</p>
+</div>
+<div class="paragraph">
+<p><strong>Why:</strong> This implements zero-trust networking at the pod level. No application can communicate with <code>demo-app</code> unless it is part of the mesh and has a valid SPIFFE identity. This replaces namespace-level network policies with identity-based authentication - a more granular security model that works consistently across clusters.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc apply -f 03-service-mesh-traffic-management/peer-authentication.yaml --context cluster-a
+oc apply -f 03-service-mesh-traffic-management/peer-authentication.yaml --context cluster-b</code></pre>
+</div>
+</div>
+<details>
+<summary class="title">Verify: mTLS enforced</summary>
+<div class="content">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get peerauthentication -n demo-app --context cluster-a</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">NAME               MODE     AGE
+demo-app-strict    STRICT   10s</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>To confirm mTLS is active, attempt a request from a pod that is not part of the mesh:</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc run test-pod --image=registry.access.redhat.com/ubi9/ubi-minimal:latest \
+  -n default --context cluster-a --restart=Never --rm -i -- \
+  curl -s http://demo-app.demo-app.svc.cluster.local:8080</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">curl: (56) Recv failure: Connection reset by peer</code></pre>
+</div>
+</div>
+</div>
+</details>
+<hr>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_what_this_solves_combined_with_steps_1_and_2"><a class="anchor" href="#_what_this_solves_combined_with_steps_1_and_2"></a>What This Solves (Combined with Steps 1 and 2)</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 40%;">
+<col style="width: 60%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Problem from Step 0</th>
+<th class="tableblock halign-left valign-top">How ACM + Submariner + Service Mesh Solve It</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">DNS/Route changes on every migration</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Service Mesh provides a stable virtual endpoint - consumers never see the cluster or cloud switch</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No traffic shifting</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">VirtualService enables canary, blue-green, and weighted traffic splits across Azure and AWS</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">All-or-nothing migration</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Gradual traffic shifting allows validation before committing to the new cloud/cluster</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No zero-trust networking</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">PeerAuthentication enforces strict mTLS - services communicate only with explicitly allowed peers, even across clouds</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">External LB reconfiguration</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Service Mesh handles routing internally over the Submariner tunnel - no cloud-specific LB changes needed for workload moves</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_official_documentation"><a class="anchor" href="#_official_documentation"></a>Official Documentation</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p><a href="https://docs.redhat.com/en/documentation/red_hat_openshift_service_mesh/3.0/html/about_red_hat_openshift_service_mesh/about-ossm">OpenShift Service Mesh 3.0 Overview</a></p>
+</li>
+<li>
+<p><a href="https://docs.redhat.com/en/documentation/red_hat_openshift_service_mesh/3.0/html/installing/ossm-installing">Installing the Service Mesh Operator</a></p>
+</li>
+<li>
+<p><a href="https://docs.redhat.com/en/documentation/red_hat_openshift_service_mesh/3.0/html/about_red_hat_openshift_service_mesh/ossm-about-ambient">Istio Ambient Mode</a></p>
+</li>
+<li>
+<p><a href="https://docs.redhat.com/en/documentation/red_hat_openshift_service_mesh/3.0/html/traffic_management/ossm-traffic-management">Traffic Management (VirtualService, DestinationRule)</a></p>
+</li>
+<li>
+<p><a href="https://docs.redhat.com/en/documentation/red_hat_openshift_service_mesh/3.0/html/security/ossm-security">Security (PeerAuthentication, mTLS)</a></p>
+</li>
+<li>
+<p><a href="https://docs.redhat.com/en/documentation/red_hat_openshift_service_mesh/3.0/html/installing/ossm-multicluster">Multi-cluster Mesh</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_alternatives_considered"><a class="anchor" href="#_alternatives_considered"></a>Alternatives Considered</h2>
+<div class="sectionbody">
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 66.6667%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Approach</th>
+<th class="tableblock halign-left valign-top">Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Service Mesh (this solution)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Full L4/L7 traffic management, mTLS, canary, blue-green - all declarative. Requires mesh installation on all clusters.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">F5 Global Traffic Manager (GTM)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">External LB can route traffic between clusters, but requires manual or API-driven configuration changes. Not part of the Red Hat stack.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Azure Traffic Manager / Front Door</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Cloud-native option for Azure workloads. Adds latency for health probes and limits L7 capabilities compared to Service Mesh.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">DNS-based failover (Route53 / external DNS)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Simple but slow (DNS TTL propagation) and lacks fine-grained traffic control (no canary, no weighted splits).</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<nav class="pagination">
+  <span class="prev"><a href="03-submariner-connectivity.html">Step 2: Submariner Connectivity</a></span>
+</nav>
+</article>
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <a class="rhd-logo" href="https://developers.redhat.com" target="_blank"></div>
+</footer>
+<script src="../_/js/vendor/clipboard.js"></script>
+<script src="../_/js/site.js"></script>
+<script async src="../_/js/vendor/highlight.js"></script>
+  </body>
+</html>
