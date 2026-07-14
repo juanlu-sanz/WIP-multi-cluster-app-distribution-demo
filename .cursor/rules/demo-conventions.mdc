@@ -14,7 +14,7 @@ This is a multi-cloud (Azure + AWS) demo for multi-cluster application distribut
 
 - `documentation/` contains all AsciiDoc courseware content (Antora component)
 - `documentation/modules/ROOT/pages/` contains the course pages in `.adoc` format
-- `documentation/modules/ROOT/examples/` contains copies of YAML manifests for inline inclusion
+- YAML manifests live in the root step directories and are referenced directly from the AsciiDoc pages
 - `00-current-state/` simulates the current manual deployment problem (step zero)
 - `01-acm-workload-placement/` solves placement with ACM + OpenShift GitOps (ApplicationSet push model)
 - `02-submariner-connectivity/` deploys Submariner via ACM for encrypted cross-cloud (Azure to AWS) L3 connectivity
@@ -40,7 +40,7 @@ This is a multi-cloud (Azure + AWS) demo for multi-cluster application distribut
   ```
 - Use `[.console-input]` before source blocks for copy-pasteable commands
 - Use `[.console-output]` before source blocks showing expected output
-- Use `include::example$path/to/file.yaml[]` to inline YAML manifests
+- Reference YAML manifests by file path in `oc apply -f` commands (no inline includes)
 - Do not use em dashes. Use regular dashes (`-`) instead
 - Use `'''` for horizontal rules between steps
 - Cross-reference other pages with `xref:page.adoc[Label]`
@@ -71,4 +71,4 @@ This is a multi-cloud (Azure + AWS) demo for multi-cluster application distribut
 - Use `app.kubernetes.io/part-of: demo-app` label consistently
 - Include resource requests and limits on Deployments
 - Include readiness and liveness probes where applicable
-- YAML files live in the step directories (e.g. `00-current-state/`) and are copied to `documentation/modules/ROOT/examples/` for inline AsciiDoc inclusion
+- YAML files live in the step directories (e.g. `00-current-state/`) and are referenced directly from the AsciiDoc pages
