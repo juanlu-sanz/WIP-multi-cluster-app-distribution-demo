@@ -1,0 +1,70 @@
+= Multi-Cluster Application Distribution
+:page-layout: home
+:!sectids:
+include::_attributes.adoc[]
+
+[.text-center.strong]
+== Seamless Application Mobility Across OpenShift Clusters
+
+This tutorial demonstrates how to achieve seamless application mobility across multiple OpenShift clusters in a multi-cloud environment (Azure + AWS). It starts by reproducing the current pain point - manual, disconnected deployments that require pipeline reconfiguration for every cluster change - and then progressively introduces Red Hat Advanced Cluster Management (ACM) for declarative workload placement, Submariner for encrypted cross-cloud connectivity, and OpenShift Service Mesh for transparent cross-cluster traffic management and failover.
+
+[.tiles.browse]
+== Browse Modules
+
+[.tile]
+.xref:00-setup.adoc[Cluster Setup]
+* xref:00-setup.adoc#prerequisites[Prerequisites]
+* xref:00-setup.adoc#export-variables[Export Variables]
+* xref:00-setup.adoc#login-clusters[Log In to Clusters]
+
+[.tile]
+.xref:01-current-state.adoc[Step 0: Current State]
+* xref:01-current-state.adoc#deploy-cluster-a[Deploy to Cluster A]
+* xref:01-current-state.adoc#migrate-cluster-b[Migrate to Cluster B]
+
+[.tile]
+.xref:02-acm-workload-placement.adoc[Step 1: ACM Workload Placement]
+* xref:02-acm-workload-placement.adoc#label-clusters[Label Clusters]
+* xref:02-acm-workload-placement.adoc#deploy-acm-app[Deploy via ACM]
+* xref:02-acm-workload-placement.adoc#migrate[Migrate to Cluster B]
+
+[.tile]
+.xref:03-submariner-connectivity.adoc[Step 2: Submariner Connectivity]
+* xref:03-submariner-connectivity.adoc#deploy-broker[Deploy Broker]
+* xref:03-submariner-connectivity.adoc#deploy-addon[Deploy Add-on]
+* xref:03-submariner-connectivity.adoc#verify-connectivity[Verify Connectivity]
+
+[.tile]
+.xref:04-service-mesh.adoc[Step 3: Service Mesh Traffic Management]
+* xref:04-service-mesh.adoc#install-istio[Install Istio]
+* xref:04-service-mesh.adoc#blue-green[Blue-Green Migration]
+* xref:04-service-mesh.adoc#canary[Canary Shifting]
+* xref:04-service-mesh.adoc#mtls[Zero-Trust mTLS]
+
+== Environment
+
+[cols="2,3",options="header"]
+|===
+| Item | Value
+
+| OpenShift version
+| {ocp-version}
+
+| ACM version
+| {acm-version}
+
+| Submariner (via ACM add-on)
+| {submariner-version}
+
+| OpenShift Service Mesh
+| {mesh-version} (Istio ambient mode)
+
+| OpenShift GitOps (Argo CD)
+| {gitops-version}
+
+| Hub + Cluster A
+| Azure (ARO or IPI)
+
+| Cluster B
+| AWS (ROSA or IPI)
+|===

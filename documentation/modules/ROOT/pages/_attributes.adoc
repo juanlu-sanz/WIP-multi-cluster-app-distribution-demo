@@ -1,0 +1,11 @@
+:experimental:
+:source-highlighter: highlightjs
+:title: Multi-Cluster Application Distribution
+:hub-context: hub
+:cluster-a-context: cluster-a
+:cluster-b-context: cluster-b
+:acm-version: 2.10+
+:ocp-version: 4.15+
+:mesh-version: 3.0+
+:submariner-version: 0.18+
+:gitops-version: 1.12+

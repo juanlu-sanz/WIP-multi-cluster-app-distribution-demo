@@ -1,0 +1,53 @@
+= Multi-Cluster Application Distribution Demo
+
+This repository contains a Red Hat Scholars courseware tutorial demonstrating seamless application mobility across multiple OpenShift clusters in a multi-cloud environment (Azure + AWS).
+
+== View the Course
+
+The full course is published at: https://redhat-scholars.github.io/multi-cluster-app-distribution-demo
+
+== Local Development
+
+To preview the course site locally:
+
+[source,bash]
+----
+npm install
+npm run dev
+----
+
+This starts a live-reload server at http://localhost:3000.
+
+== Build the Site
+
+[source,bash]
+----
+npx antora site.yml
+----
+
+The generated site is output to `gh-pages/`.
+
+== Repository Structure
+
+[cols="2,4",options="header"]
+|===
+| Directory | Purpose
+
+| `documentation/`
+| Antora courseware source (AsciiDoc pages, navigation, attributes)
+
+| `00-current-state/`
+| YAML manifests for Step 0 - manual deployment baseline
+
+| `01-acm-workload-placement/`
+| YAML manifests for Step 1 - ACM declarative placement
+
+| `02-submariner-connectivity/`
+| YAML manifests for Step 2 - Submariner cross-cloud networking
+
+| `03-service-mesh-traffic-management/`
+| YAML manifests for Step 3 - Service Mesh traffic management
+
+| `setup/`
+| Terraform + post-install script (internal, for provisioning clusters)
+|===

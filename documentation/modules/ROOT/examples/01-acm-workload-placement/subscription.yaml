@@ -1,0 +1,20 @@
+# subscription.yaml
+# Purpose: ACM Subscription that ties together the Channel (source) and Placement (target).
+# It tells ACM: "deploy the manifests from this Git path to whichever cluster the Placement selects."
+apiVersion: apps.open-cluster-management.io/v1
+kind: Subscription
+metadata:
+  name: demo-app-subscription
+  namespace: demo-app-acm
+  annotations:
+    apps.open-cluster-management.io/git-path: 00-current-state
+    apps.open-cluster-management.io/git-branch: main
+  labels:
+    app.kubernetes.io/part-of: demo-app
+spec:
+  channel: demo-app-acm/demo-app-channel
+  placement:
+    placementRef:
+      name: demo-app-placement
+      kind: Placement
+      apiGroup: cluster.open-cluster-management.io

@@ -1,0 +1,10 @@
+# managedclusterset-binding.yaml
+# Purpose: Binds the ManagedClusterSet to the ACM application namespace,
+# allowing Placement rules in that namespace to select clusters from the set.
+apiVersion: cluster.open-cluster-management.io/v1beta2
+kind: ManagedClusterSetBinding
+metadata:
+  name: production-clusters
+  namespace: demo-app-acm
+spec:
+  clusterSet: production-clusters

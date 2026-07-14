@@ -1,0 +1,6 @@
+name: multi-cluster-app-distribution
+title: Multi-Cluster Application Distribution
+version: master
+nav:
+  - modules/ROOT/nav.adoc
+start_page: ROOT:index.adoc

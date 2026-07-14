@@ -1,0 +1,104 @@
+= Cluster Setup
+include::_attributes.adoc[]
+
+Before starting the tutorial, log in to all three clusters, rename the contexts, and export the workshop variables. This only needs to be done once per terminal session.
+
+NOTE: If you used `setup/post-install.sh`, the contexts and logins are already configured.
+
+TIP: *Red Hatters:* To provision the clusters from scratch, see the `setup/` directory for Terraform automation (ARO on Azure + ROSA HCP on AWS). The setup script also installs all required operators and configures the contexts below.
+
+[#prerequisites]
+== Prerequisites
+
+* An ACM Hub cluster with at least two managed clusters joined (Hub + Cluster A on Azure, Cluster B on AWS)
+* `oc` CLI authenticated as cluster-admin on the Hub
+* Cluster admin access to both managed clusters
+* OpenShift GitOps Operator installed on the Hub (for step 01+)
+* Cloud provider credentials for both managed clusters (for step 02 - Submariner)
+* OpenShift Service Mesh {mesh-version} Operator installed on all clusters (for step 03)
+
+[#export-variables]
+== 1. Export workshop variables
+
+Fill in your values and export them. These variables are referenced by YAML files in this repo and substituted at apply time via `envsubst`.
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+export HUB_API_URL="https://api.hub.example.com:6443"
+export CLUSTER_A_API_URL="https://api.cluster-a.example.com:6443"
+export CLUSTER_B_API_URL="https://api.cluster-b.example.com:6443"
+export GIT_ORG="your-github-org"
+export REMOTE_INGRESS_IP="10.0.0.1"
+----
+
+[cols="2,2,4",options="header"]
+|===
+| Variable | Used in | Description
+
+| `HUB_API_URL`
+| This page (login)
+| API server URL for the ACM Hub cluster (Azure)
+
+| `CLUSTER_A_API_URL`
+| This page (login)
+| API server URL for the first managed cluster (Azure)
+
+| `CLUSTER_B_API_URL`
+| This page (login)
+| API server URL for the second managed cluster (AWS)
+
+| `GIT_ORG`
+| `01-acm-workload-placement/channel.yaml`
+| GitHub org/user for the ACM Channel Git repository
+
+| `REMOTE_INGRESS_IP`
+| `03-service-mesh-traffic-management/service-entry.yaml`
+| Ingress gateway IP of the peer cluster for cross-cluster mesh routing. With Submariner (Step 2), this can be an internal cluster IP reachable through the tunnel.
+|===
+
+[#login-clusters]
+== 2. Log in to each cluster
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc login --server=$HUB_API_URL
+oc login --server=$CLUSTER_A_API_URL
+oc login --server=$CLUSTER_B_API_URL
+----
+
+[#rename-contexts]
+== 3. Rename the contexts
+
+The default context names are long and auto-generated. Rename them to `hub`, `cluster-a`, and `cluster-b`:
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc config rename-context <HUB_CONTEXT_NAME> hub
+oc config rename-context <CLUSTER_A_CONTEXT_NAME> cluster-a
+oc config rename-context <CLUSTER_B_CONTEXT_NAME> cluster-b
+----
+
+TIP: Run `oc config get-contexts` after each login to see the auto-generated context name and use it in the rename command.
+
+[#verify-contexts]
+== 4. Verify
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc config get-contexts
+----
+
+[.console-output]
+[source,bash]
+----
+CURRENT   NAME        CLUSTER                    AUTHINFO
+          hub         api-hub:6443               admin/api-hub:6443
+          cluster-a   api-cluster-a:6443         admin/api-cluster-a:6443
+*         cluster-b   api-cluster-b:6443         admin/api-cluster-b:6443
+----
+
+From this point on, every `oc` command in the workshop uses `--context hub`, `--context cluster-a`, or `--context cluster-b` explicitly, so you never need to switch your active context. YAML files with `$\{VARIABLE}` placeholders are piped through `envsubst` before applying.

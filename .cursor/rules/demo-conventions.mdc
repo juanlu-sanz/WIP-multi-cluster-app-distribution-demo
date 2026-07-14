@@ -1,6 +1,6 @@
 ---
 description: Conventions and decisions for the multi-cloud (Azure + AWS) multi-cluster app distribution demo
-globs: "**/*.md,**/*.yaml"
+globs: "**/*.adoc,**/*.yaml,**/*.yml"
 alwaysApply: false
 ---
 
@@ -8,10 +8,13 @@ alwaysApply: false
 
 ## Repository Purpose
 
-This is a multi-cloud (Azure + AWS) demo for multi-cluster application distribution using ACM, Submariner, and Service Mesh. It is never uploaded to GitHub and must never contain customer or user names.
+This is a multi-cloud (Azure + AWS) demo for multi-cluster application distribution using ACM, Submariner, and Service Mesh, built as a Red Hat Scholars courseware site using AsciiDoc and Antora. It must never contain customer or user names.
 
 ## Structure
 
+- `documentation/` contains all AsciiDoc courseware content (Antora component)
+- `documentation/modules/ROOT/pages/` contains the course pages in `.adoc` format
+- `documentation/modules/ROOT/examples/` contains copies of YAML manifests for inline inclusion
 - `00-current-state/` simulates the current manual deployment problem (step zero)
 - `01-acm-workload-placement/` solves placement with ACM
 - `02-submariner-connectivity/` deploys Submariner via ACM for encrypted cross-cloud (Azure to AWS) L3 connectivity
@@ -19,32 +22,40 @@ This is a multi-cloud (Azure + AWS) demo for multi-cluster application distribut
 - `setup/` contains Terraform + post-install script for provisioning clusters (internal, not part of the demo)
 - Steps are progressive: each builds on the previous one
 
-## README Formatting
+## AsciiDoc Formatting
 
-- Every numbered step must have a **What** and **Why** bullet point pair:
+- Every numbered step must have a *What* and *Why* pair in bold:
   ```
-  - **What:** One sentence describing the concrete action.
-  - **Why:** One sentence explaining why this step matters.
+  *What:* One sentence describing the concrete action.
+
+  *Why:* One sentence explaining why this step matters.
   ```
-- Every step must have a foldable verification block using `<details>` / `<summary>` with a ✅ checkmark:
+- Every step must have a collapsible verification block:
   ```
-  <details>
-  <summary>✅ Verify: Description of what to check</summary>
+  .Verify: Description of what to check
+  [%collapsible]
+  ====
   ...commands and expected output...
-  </details>
+  ====
   ```
-- Do not use em dashes (`—`). Use regular dashes (`-`) instead
-- Horizontal rules (`---`) are fine and encouraged between steps
-- YAML files live directly in each step folder alongside `README.md`, no `manifests/` subfolder
+- Use `[.console-input]` before source blocks for copy-pasteable commands
+- Use `[.console-output]` before source blocks showing expected output
+- Use `include::example$path/to/file.yaml[]` to inline YAML manifests
+- Do not use em dashes. Use regular dashes (`-`) instead
+- Use `'''` for horizontal rules between steps
+- Cross-reference other pages with `xref:page.adoc[Label]`
+- External links use `link:URL[Label]`
+- Use `NOTE:`, `TIP:`, `IMPORTANT:`, `WARNING:` admonitions
 - All doc links must point to `docs.redhat.com` or `docs.openshift.com`, no placeholders
+- Use attributes from `_attributes.adoc` for version numbers (e.g. `{ocp-version}`, `{acm-version}`)
 
 ## CLI Conventions
 
-- Every `oc` command in the READMEs must include an explicit `--context` flag (`hub`, `cluster-a`, or `cluster-b`)
-- Never use `oc login` inside step READMEs; context setup is done once in the top-level README's Cluster Setup section
+- Every `oc` command in the AsciiDoc pages must include an explicit `--context` flag (`hub`, `cluster-a`, or `cluster-b`)
+- Never use `oc login` inside step pages; context setup is done once in `00-setup.adoc`
 - Hub-targeted commands use `--context hub`; managed cluster commands use `--context cluster-a` or `--context cluster-b`
 - YAML files that contain `${VARIABLE}` placeholders must be applied via `envsubst < file.yaml | oc apply --context <ctx> -f -`
-- All workshop variables are exported once in the top-level README's Cluster Setup section; YAML files and step READMEs reference them via `${VAR}` syntax
+- All workshop variables are exported once in `00-setup.adoc`; YAML files reference them via `${VAR}` syntax
 
 ## Content Rules
 
@@ -60,3 +71,4 @@ This is a multi-cloud (Azure + AWS) demo for multi-cluster application distribut
 - Use `app.kubernetes.io/part-of: demo-app` label consistently
 - Include resource requests and limits on Deployments
 - Include readiness and liveness probes where applicable
+- YAML files live in the step directories (e.g. `00-current-state/`) and are copied to `documentation/modules/ROOT/examples/` for inline AsciiDoc inclusion

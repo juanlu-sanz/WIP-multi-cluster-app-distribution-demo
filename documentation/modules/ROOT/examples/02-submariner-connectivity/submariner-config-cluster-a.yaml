@@ -1,0 +1,19 @@
+# submariner-config-cluster-a.yaml
+# Purpose: Configures Submariner for Cluster A (Azure).
+# ACM reads this to prepare the cloud environment (open NSG rules for IPsec)
+# and designate gateway node(s) on the managed cluster.
+apiVersion: submarineraddon.open-cluster-management.io/v1alpha1
+kind: SubmarinerConfig
+metadata:
+  name: submariner
+  namespace: cluster-a
+  labels:
+    app.kubernetes.io/part-of: demo-app
+spec:
+  gatewayConfig:
+    gateways: 1
+  IPSecNATTPort: 4500
+  NATTEnable: true
+  cableDriver: libreswan
+  credentialsSecret:
+    name: cluster-a-cloud-creds
