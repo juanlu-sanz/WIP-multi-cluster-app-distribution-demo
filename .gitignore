@@ -1,5 +1,6 @@
 .DS_Store
 t/
+myenv.sh
 
 # Terraform
 setup/.terraform/
