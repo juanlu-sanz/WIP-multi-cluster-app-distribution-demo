@@ -179,19 +179,17 @@
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>Before starting the tutorial, log in to all three clusters, rename the contexts, and export the workshop variables. This only needs to be done once per terminal session.</p>
+<p>Before starting the tutorial you need three OpenShift clusters with the right operators installed, <code>oc</code> contexts configured, and workshop variables exported. This page covers two paths:</p>
 </div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-If you used <code>setup/post-install.sh</code>, the contexts and logins are already configured.
-</td>
-</tr>
-</table>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Option A - Demo Platform (pre-provisioned clusters):</strong> order clusters from the <a href="https://demo.redhat.com">Red Hat Demo Platform</a>, then import and wire them together.</p>
+</li>
+<li>
+<p><strong>Option B - Quick login:</strong> if someone else already set up the clusters (e.g. via <code>setup/post-install.sh</code> or Terraform), just log in and start.</p>
+</li>
+</ul>
 </div>
 <div class="admonitionblock tip">
 <table>
@@ -200,7 +198,7 @@ If you used <code>setup/post-install.sh</code>, the contexts and logins are alre
 <i class="fa icon-tip" title="Tip"></i>
 </td>
 <td class="content">
-<strong>Red Hatters:</strong> To provision the clusters from scratch, see the <code>setup/</code> directory for Terraform automation (ARO on Azure + ROSA HCP on AWS). The setup script also installs all required operators and configures the contexts below.
+<strong>Red Hatters:</strong> To provision the clusters from scratch with Terraform, see the <code>setup/</code> directory. The <code>post-install.sh</code> script installs all operators, imports clusters, and configures everything below automatically.
 </td>
 </tr>
 </table>
@@ -213,32 +211,531 @@ If you used <code>setup/post-install.sh</code>, the contexts and logins are alre
 <div class="ulist">
 <ul>
 <li>
-<p>An ACM Hub cluster with at least two managed clusters joined (Hub + Cluster A on Azure, Cluster B on AWS)</p>
+<p><code>oc</code> CLI (4.15+) - <a href="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/">download</a></p>
 </li>
 <li>
-<p><code>oc</code> CLI authenticated as cluster-admin on the Hub</p>
+<p>Cluster admin access to all three clusters</p>
 </li>
 <li>
-<p>Cluster admin access to both managed clusters</p>
-</li>
-<li>
-<p>OpenShift GitOps Operator installed on the Hub (for step 01+)</p>
-</li>
-<li>
-<p>Cloud provider credentials for both managed clusters (for step 02 - Submariner)</p>
-</li>
-<li>
-<p>OpenShift Service Mesh 3.0+ Operator installed on all clusters (for step 03)</p>
+<p>A GitHub account (for the ApplicationSet in step 01)</p>
 </li>
 </ul>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="export-variables"><a class="anchor" href="#export-variables"></a>1. Export workshop variables</h2>
+<h2 id="option-a-demo-platform"><a class="anchor" href="#option-a-demo-platform"></a>Option A - Using Pre-Provisioned Clusters (Demo Platform)</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Fill in your values and export them. These variables are referenced by YAML files in this repo and substituted at apply time via <code>envsubst</code>.</p>
+<p>If you have clusters provisioned through the <a href="https://demo.redhat.com">Red Hat Demo Platform</a> (or similar), follow this section to gather credentials, import managed clusters into ACM, and install the required operators.</p>
+</div>
+<div class="sect2">
+<h3 id="_cluster_mapping"><a class="anchor" href="#_cluster_mapping"></a>Cluster mapping</h3>
+<div class="paragraph">
+<p>Order the following catalog items from the demo platform:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Demo Platform Catalog Item</th>
+<th class="tableblock halign-left valign-top">Demo Role</th>
+<th class="tableblock halign-left valign-top"><code>oc</code> Context</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">ACM Hub cluster</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Hub (ACM control plane, GitOps)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>hub</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">ARO cluster</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Cluster A (managed cluster - Azure)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cluster-a</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">ROSA HCP cluster</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Cluster B (managed cluster - AWS)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cluster-b</code></p></td>
+</tr>
+</tbody>
+</table>
+<hr>
+</div>
+<div class="sect2">
+<h3 id="gather-credentials"><a class="anchor" href="#gather-credentials"></a>1. Gather API URLs and credentials</h3>
+<div class="paragraph">
+<p><strong>What:</strong> Collect the API server URL and admin password for each cluster from the demo platform provisioning page or email.</p>
+</div>
+<div class="paragraph">
+<p><strong>Why:</strong> You need these to log in with <code>oc</code> and configure the contexts used throughout the workshop.</p>
+</div>
+<div class="paragraph">
+<p>Each cluster&#8217;s credentials are displayed on the demo platform provisioning page. Collect the following:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 37.5%;">
+<col style="width: 37.5%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Cluster</th>
+<th class="tableblock halign-left valign-top">API URL</th>
+<th class="tableblock halign-left valign-top">Credentials</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Hub (ACM)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Provided by demo platform</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>kubeadmin</code> / password from provisioning page</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Cluster A (ARO)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Provided by demo platform</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>kubeadmin</code> / password from provisioning page</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Cluster B (ROSA HCP)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Provided by demo platform</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cluster-admin</code> / password from provisioning page</p></td>
+</tr>
+</tbody>
+</table>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+If the demo platform provides a ready-made <code>oc login</code> command, you can copy it directly and skip to the context rename in step 2.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>If you need to retrieve the values manually using the CLI:</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># ARO clusters (Hub / Cluster A) - requires az CLI logged in
+az aro show --resource-group &lt;RG&gt; --name &lt;CLUSTER_NAME&gt; --query apiserverProfile.url -o tsv
+az aro list-credentials --resource-group &lt;RG&gt; --name &lt;CLUSTER_NAME&gt; --query kubeadminPassword -o tsv
+
+# ROSA HCP (Cluster B) - requires rosa CLI logged in
+rosa describe cluster --cluster=&lt;CLUSTER_NAME&gt; --output json | jq -r '.api.url'
+rosa create admin --cluster=&lt;CLUSTER_NAME&gt; --yes</code></pre>
+</div>
+</div>
+<hr>
+</div>
+<div class="sect2">
+<h3 id="login-contexts"><a class="anchor" href="#login-contexts"></a>2. Log in and configure contexts</h3>
+<div class="paragraph">
+<p><strong>What:</strong> Log in to all three clusters and rename the <code>oc</code> contexts to <code>hub</code>, <code>cluster-a</code>, and <code>cluster-b</code>.</p>
+</div>
+<div class="paragraph">
+<p><strong>Why:</strong> Every command in this workshop uses an explicit <code>--context</code> flag. Consistent context names let you copy-paste commands without modification.</p>
+</div>
+<div class="paragraph">
+<p>Export the API URLs (replace with your actual values):</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">export HUB_API_URL="https://api.hub.example.com:6443"
+export CLUSTER_A_API_URL="https://api.cluster-a.example.com:6443"
+export CLUSTER_B_API_URL="https://api.cluster-b.example.com:6443"</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Log in and rename each context:</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc login "$HUB_API_URL" --username kubeadmin --password &lt;HUB_PASSWORD&gt; --insecure-skip-tls-verify=true
+oc config rename-context "$(oc config current-context)" hub
+
+oc login "$CLUSTER_A_API_URL" --username kubeadmin --password &lt;CLUSTER_A_PASSWORD&gt; --insecure-skip-tls-verify=true
+oc config rename-context "$(oc config current-context)" cluster-a
+
+oc login "$CLUSTER_B_API_URL" --username cluster-admin --password &lt;CLUSTER_B_PASSWORD&gt; --insecure-skip-tls-verify=true
+oc config rename-context "$(oc config current-context)" cluster-b</code></pre>
+</div>
+</div>
+<details>
+<summary class="title">Verify: three named contexts exist</summary>
+<div class="content">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc config get-contexts</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">CURRENT   NAME        CLUSTER                    AUTHINFO
+          hub         api-hub:6443               admin/api-hub:6443
+          cluster-a   api-cluster-a:6443         admin/api-cluster-a:6443
+*         cluster-b   api-cluster-b:6443         admin/api-cluster-b:6443</code></pre>
+</div>
+</div>
+</div>
+</details>
+<hr>
+</div>
+<div class="sect2">
+<h3 id="verify-acm"><a class="anchor" href="#verify-acm"></a>3. Verify ACM on the Hub</h3>
+<div class="paragraph">
+<p><strong>What:</strong> Confirm that ACM is installed and ready on the Hub cluster.</p>
+</div>
+<div class="paragraph">
+<p><strong>Why:</strong> The demo platform hub comes with ACM pre-installed. All subsequent steps depend on a healthy <code>MultiClusterHub</code>.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get multiclusterhub -n open-cluster-management --context hub</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The status should show <code>Running</code>. If it is not ready yet, wait a few minutes and check again.</p>
+</div>
+<hr>
+</div>
+<div class="sect2">
+<h3 id="install-gitops"><a class="anchor" href="#install-gitops"></a>4. Install OpenShift GitOps on the Hub</h3>
+<div class="paragraph">
+<p><strong>What:</strong> Check whether OpenShift GitOps is installed on the Hub and install it if missing.</p>
+</div>
+<div class="paragraph">
+<p><strong>Why:</strong> Step 01 of the demo uses an ApplicationSet on the Hub&#8217;s Argo CD instance to push workloads to managed clusters.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get deployment openshift-gitops-server -n openshift-gitops --context hub</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>If the deployment exists, GitOps is already installed - skip to the next step.</p>
+</div>
+<div class="paragraph">
+<p>If GitOps is not installed, create the Subscription:</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">cat &lt;&lt;'EOF' | oc apply --context hub -f -
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: openshift-gitops-operator
+  namespace: openshift-operators
+spec:
+  channel: latest
+  name: openshift-gitops-operator
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+  installPlanApproval: Automatic
+EOF</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Wait for the operator to roll out:</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">until oc get deployment openshift-gitops-server -n openshift-gitops --context hub &amp;&gt;/dev/null; do sleep 10; done
+oc rollout status deployment/openshift-gitops-server -n openshift-gitops --context hub --timeout=300s</code></pre>
+</div>
+</div>
+<details>
+<summary class="title">Verify: GitOps server is running</summary>
+<div class="content">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get deployment openshift-gitops-server -n openshift-gitops --context hub</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">NAME                      READY   UP-TO-DATE   AVAILABLE   AGE
+openshift-gitops-server   1/1     1            1           2m</code></pre>
+</div>
+</div>
+</div>
+</details>
+<hr>
+</div>
+<div class="sect2">
+<h3 id="import-clusters"><a class="anchor" href="#import-clusters"></a>5. Import managed clusters into ACM</h3>
+<div class="paragraph">
+<p><strong>What:</strong> Register Cluster A and Cluster B as ACM managed clusters and deploy the Klusterlet agent on each.</p>
+</div>
+<div class="paragraph">
+<p><strong>Why:</strong> ACM needs the managed clusters imported before it can place workloads, configure Submariner, or manage policies on them.</p>
+</div>
+<div class="paragraph">
+<p>Repeat the following for each cluster. Start with <code>cluster-a</code>, then run again with <code>cluster-b</code>:</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">CLUSTER_NAME="cluster-a"
+CLUSTER_CONTEXT="cluster-a"</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Create the <code>ManagedCluster</code> on the Hub:</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">cat &lt;&lt;EOF | oc apply --context hub -f -
+apiVersion: cluster.open-cluster-management.io/v1
+kind: ManagedCluster
+metadata:
+  name: $CLUSTER_NAME
+spec:
+  hubAcceptsClient: true
+EOF</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Create the <code>KlusterletAddonConfig</code>:</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">cat &lt;&lt;EOF | oc apply --context hub -f -
+apiVersion: agent.open-cluster-management.io/v1
+kind: KlusterletAddonConfig
+metadata:
+  name: $CLUSTER_NAME
+  namespace: $CLUSTER_NAME
+spec:
+  clusterName: $CLUSTER_NAME
+  clusterNamespace: $CLUSTER_NAME
+  applicationManager:
+    enabled: false
+  certPolicyController:
+    enabled: true
+  policyController:
+    enabled: true
+  searchCollector:
+    enabled: true
+EOF</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Wait for the import secret, then apply it on the managed cluster:</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">until oc get secret "${CLUSTER_NAME}-import" -n "$CLUSTER_NAME" --context hub &amp;&gt;/dev/null; do sleep 5; done
+
+oc get secret "${CLUSTER_NAME}-import" -n "$CLUSTER_NAME" --context hub \
+  -o jsonpath='{.data.crds\.yaml}' | base64 -d | oc apply --context "$CLUSTER_CONTEXT" -f -
+
+oc get secret "${CLUSTER_NAME}-import" -n "$CLUSTER_NAME" --context hub \
+  -o jsonpath='{.data.import\.yaml}' | base64 -d | oc apply --context "$CLUSTER_CONTEXT" -f -</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Wait for the cluster to join:</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc wait managedcluster "$CLUSTER_NAME" \
+  --for=condition=ManagedClusterConditionAvailable \
+  --timeout=300s \
+  --context hub</code></pre>
+</div>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+Run all the commands in this step twice - first with <code>CLUSTER_NAME=cluster-a</code> / <code>CLUSTER_CONTEXT=cluster-a</code>, then with <code>CLUSTER_NAME=cluster-b</code> / <code>CLUSTER_CONTEXT=cluster-b</code>.
+</td>
+</tr>
+</table>
+</div>
+<details>
+<summary class="title">Verify: both clusters are available in ACM</summary>
+<div class="content">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get managedclusters --context hub</code></pre>
+</div>
+</div>
+<div class="listingblock console-output">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">NAME            HUB ACCEPTED   MANAGED CLUSTER URLS                    JOINED   AVAILABLE   AGE
+cluster-a       true           https://api.cluster-a.example.com:6443  True     True        2m
+cluster-b       true           https://api.cluster-b.example.com:6443  True     True        1m
+local-cluster   true           https://api.hub.example.com:6443        True     True        30m</code></pre>
+</div>
+</div>
+</div>
+</details>
+<hr>
+</div>
+<div class="sect2">
+<h3 id="gitops-integration"><a class="anchor" href="#gitops-integration"></a>6. Configure ACM + GitOps integration</h3>
+<div class="paragraph">
+<p><strong>What:</strong> Bind the global <code>ManagedClusterSet</code> to the <code>openshift-gitops</code> namespace and create a <code>GitOpsCluster</code> resource so managed clusters appear as Argo CD targets.</p>
+</div>
+<div class="paragraph">
+<p><strong>Why:</strong> This enables the ApplicationSet push model used in <a href="02-acm-workload-placement.html" class="xref page">Step 01</a> - ACM automatically creates Argo CD cluster secrets for each managed cluster matched by the Placement.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">cat &lt;&lt;'EOF' | oc apply --context hub -f -
+apiVersion: cluster.open-cluster-management.io/v1beta2
+kind: ManagedClusterSetBinding
+metadata:
+  name: global
+  namespace: openshift-gitops
+spec:
+  clusterSet: global
+EOF
+
+cat &lt;&lt;'EOF' | oc apply --context hub -f -
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: all-openshift-clusters
+  namespace: openshift-gitops
+spec:
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchLabels:
+            vendor: OpenShift
+EOF
+
+cat &lt;&lt;'EOF' | oc apply --context hub -f -
+apiVersion: apps.open-cluster-management.io/v1beta1
+kind: GitOpsCluster
+metadata:
+  name: gitops-clusters
+  namespace: openshift-gitops
+spec:
+  argoServer:
+    cluster: local-cluster
+    argoNamespace: openshift-gitops
+  placementRef:
+    kind: Placement
+    apiVersion: cluster.open-cluster-management.io/v1beta1
+    name: all-openshift-clusters
+    namespace: openshift-gitops
+EOF</code></pre>
+</div>
+</div>
+<details>
+<summary class="title">Verify: Argo CD cluster secrets exist for managed clusters</summary>
+<div class="content">
+<div class="paragraph">
+<p>Wait a moment for ACM to generate the secrets, then check:</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get secrets -n openshift-gitops -l argocd.argoproj.io/secret-type=cluster --context hub</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>You should see one secret per managed cluster.</p>
+</div>
+</div>
+</details>
+<hr>
+</div>
+<div class="sect2">
+<h3 id="install-service-mesh"><a class="anchor" href="#install-service-mesh"></a>7. Install Service Mesh on managed clusters</h3>
+<div class="paragraph">
+<p><strong>What:</strong> Install the OpenShift Service Mesh 3.0+ operator on Cluster A and Cluster B.</p>
+</div>
+<div class="paragraph">
+<p><strong>Why:</strong> <a href="04-service-mesh.html" class="xref page">Step 03</a> uses Istio ambient mode for traffic management across clusters. The operator must be installed before creating any mesh resources.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">for CTX in cluster-a cluster-b; do
+  cat &lt;&lt;'EOF' | oc apply --context "$CTX" -f -
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: servicemeshoperator3
+  namespace: openshift-operators
+spec:
+  channel: stable
+  name: servicemeshoperator3
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+  installPlanApproval: Automatic
+EOF
+done</code></pre>
+</div>
+</div>
+<details>
+<summary class="title">Verify: Service Mesh CSV is installed on both clusters</summary>
+<div class="content">
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get csv -n openshift-operators --context cluster-a | grep servicemesh
+oc get csv -n openshift-operators --context cluster-b | grep servicemesh</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Both should show a <code>servicemeshoperator3</code> CSV in <code>Succeeded</code> phase.</p>
+</div>
+</div>
+</details>
+<hr>
+</div>
+<div class="sect2">
+<h3 id="check-cidrs"><a class="anchor" href="#check-cidrs"></a>8. Check CIDR allocation (Submariner)</h3>
+<div class="paragraph">
+<p><strong>What:</strong> Verify that pod and service CIDRs do not overlap across the three clusters.</p>
+</div>
+<div class="paragraph">
+<p><strong>Why:</strong> <a href="03-submariner-connectivity.html" class="xref page">Step 02</a> deploys Submariner for cross-cluster connectivity. Submariner requires non-overlapping CIDRs unless globalnet is enabled.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">for CTX in hub cluster-a cluster-b; do
+  echo "=== $CTX ==="
+  echo "  Pod CIDR:     $(oc get network cluster -o jsonpath='{.status.clusterNetwork[0].cidr}' --context $CTX)"
+  echo "  Service CIDR: $(oc get network cluster -o jsonpath='{.status.serviceNetwork[0]}' --context $CTX)"
+done</code></pre>
+</div>
+</div>
+<div class="admonitionblock warning">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-warning" title="Warning"></i>
+</td>
+<td class="content">
+Demo platform clusters may use default CIDRs that overlap. If any CIDRs overlap, enable globalnet in the <code>Broker</code> resource (see the <a href="https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.11/html/networking/networking#globalnet">ACM Submariner globalnet documentation</a>).
+</td>
+</tr>
+</table>
+</div>
+<hr>
+</div>
+<div class="sect2">
+<h3 id="export-variables"><a class="anchor" href="#export-variables"></a>9. Export workshop variables</h3>
+<div class="paragraph">
+<p><strong>What:</strong> Set the shell variables referenced by YAML files throughout the demo.</p>
+</div>
+<div class="paragraph">
+<p><strong>Why:</strong> YAML files with <code>${VARIABLE}</code> placeholders are piped through <code>envsubst</code> before applying. These variables must be exported in every terminal session.</p>
 </div>
 <div class="listingblock console-input">
 <div class="content">
@@ -246,7 +743,7 @@ If you used <code>setup/post-install.sh</code>, the contexts and logins are alre
 export CLUSTER_A_API_URL="https://api.cluster-a.example.com:6443"
 export CLUSTER_B_API_URL="https://api.cluster-b.example.com:6443"
 export GIT_ORG="your-github-org"
-export REMOTE_INGRESS_IP="10.0.0.1"</code></pre>
+export REMOTE_INGRESS_IP="&lt;set after Submariner - see step 02&gt;"</code></pre>
 </div>
 </div>
 <table class="tableblock frame-all grid-all stretch">
@@ -266,17 +763,17 @@ export REMOTE_INGRESS_IP="10.0.0.1"</code></pre>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>HUB_API_URL</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">This page (login)</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">API server URL for the ACM Hub cluster (Azure)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">API server URL for the ACM Hub cluster</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>CLUSTER_A_API_URL</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">This page (login)</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">API server URL for the first managed cluster (Azure)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">API server URL for Cluster A (Azure)</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>CLUSTER_B_API_URL</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">This page (login)</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">API server URL for the second managed cluster (AWS)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">API server URL for Cluster B (AWS)</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>GIT_ORG</code></p></td>
@@ -290,11 +787,45 @@ export REMOTE_INGRESS_IP="10.0.0.1"</code></pre>
 </tr>
 </tbody>
 </table>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+If you already exported <code>HUB_API_URL</code>, <code>CLUSTER_A_API_URL</code>, and <code>CLUSTER_B_API_URL</code> in step 2, you only need to add <code>GIT_ORG</code>. <code>REMOTE_INGRESS_IP</code> is determined during the Submariner step.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>You are now ready to start the demo from <a href="01-current-state.html" class="xref page">Step 0</a>.</p>
+</div>
+<hr>
+</div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="login-clusters"><a class="anchor" href="#login-clusters"></a>2. Log in to each cluster</h2>
+<h2 id="option-b-quick-login"><a class="anchor" href="#option-b-quick-login"></a>Option B - Quick Login (clusters already set up)</h2>
 <div class="sectionbody">
+<div class="paragraph">
+<p>If someone else already provisioned and configured the clusters (e.g. via <code>setup/post-install.sh</code>), you only need to log in and set up contexts.</p>
+</div>
+<div class="sect2">
+<h3 id="_1_export_workshop_variables"><a class="anchor" href="#_1_export_workshop_variables"></a>1. Export workshop variables</h3>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">export HUB_API_URL="https://api.hub.example.com:6443"
+export CLUSTER_A_API_URL="https://api.cluster-a.example.com:6443"
+export CLUSTER_B_API_URL="https://api.cluster-b.example.com:6443"
+export GIT_ORG="your-github-org"
+export REMOTE_INGRESS_IP="&lt;set after Submariner - see step 02&gt;"</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_2_log_in_to_each_cluster"><a class="anchor" href="#_2_log_in_to_each_cluster"></a>2. Log in to each cluster</h3>
 <div class="listingblock console-input">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc login --server=$HUB_API_URL
@@ -303,10 +834,8 @@ oc login --server=$CLUSTER_B_API_URL</code></pre>
 </div>
 </div>
 </div>
-</div>
-<div class="sect1">
-<h2 id="rename-contexts"><a class="anchor" href="#rename-contexts"></a>3. Rename the contexts</h2>
-<div class="sectionbody">
+<div class="sect2">
+<h3 id="_3_rename_the_contexts"><a class="anchor" href="#_3_rename_the_contexts"></a>3. Rename the contexts</h3>
 <div class="paragraph">
 <p>The default context names are long and auto-generated. Rename them to <code>hub</code>, <code>cluster-a</code>, and <code>cluster-b</code>:</p>
 </div>
@@ -330,10 +859,8 @@ Run <code>oc config get-contexts</code> after each login to see the auto-generat
 </table>
 </div>
 </div>
-</div>
-<div class="sect1">
-<h2 id="verify-contexts"><a class="anchor" href="#verify-contexts"></a>4. Verify</h2>
-<div class="sectionbody">
+<div class="sect2">
+<h3 id="_4_verify"><a class="anchor" href="#_4_verify"></a>4. Verify</h3>
 <div class="listingblock console-input">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc config get-contexts</code></pre>
@@ -349,6 +876,7 @@ Run <code>oc config get-contexts</code> after each login to see the auto-generat
 </div>
 <div class="paragraph">
 <p>From this point on, every <code>oc</code> command in the workshop uses <code>--context hub</code>, <code>--context cluster-a</code>, or <code>--context cluster-b</code> explicitly, so you never need to switch your active context. YAML files with <code>${VARIABLE}</code> placeholders are piped through <code>envsubst</code> before applying.</p>
+</div>
 </div>
 </div>
 </div>
