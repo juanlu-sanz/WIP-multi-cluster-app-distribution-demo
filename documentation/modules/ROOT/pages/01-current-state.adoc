@@ -24,6 +24,7 @@ NOTE: In a real-world scenario without contexts configured, teams would `oc logi
 [source,bash,subs="+macros,+attributes"]
 ----
 oc apply -f 00-current-state/namespace.yaml --context cluster-a
+oc apply -f 00-current-state/configmap.yaml --context cluster-a
 oc apply -f 00-current-state/deployment.yaml --context cluster-a
 oc apply -f 00-current-state/service.yaml --context cluster-a
 oc apply -f 00-current-state/route.yaml --context cluster-a
@@ -60,7 +61,7 @@ demo-app-demo-app.apps.cluster-a.example.com
 [.console-input]
 [source,bash]
 ----
-curl -s http://$(oc get route demo-app -n demo-app --context cluster-a -o jsonpath='{.status.ingress[0].host}')
+curl -sk https://$(oc get route demo-app -n demo-app --context cluster-a -o jsonpath='{.status.ingress[0].host}')
 ----
 
 [.console-output]
@@ -92,6 +93,7 @@ Assume Cluster A needs maintenance. The application must move to Cluster B.
 [source,bash,subs="+macros,+attributes"]
 ----
 oc apply -f 00-current-state/namespace.yaml --context cluster-b
+oc apply -f 00-current-state/configmap.yaml --context cluster-b
 oc apply -f 00-current-state/deployment.yaml --context cluster-b
 oc apply -f 00-current-state/service.yaml --context cluster-b
 oc apply -f 00-current-state/route.yaml --context cluster-b
@@ -145,6 +147,7 @@ Go back to Cluster A and remove the old deployment:
 oc delete -f 00-current-state/route.yaml --context cluster-a
 oc delete -f 00-current-state/service.yaml --context cluster-a
 oc delete -f 00-current-state/deployment.yaml --context cluster-a
+oc delete -f 00-current-state/configmap.yaml --context cluster-a
 oc delete -f 00-current-state/namespace.yaml --context cluster-a
 ----
 
@@ -196,3 +199,16 @@ The next steps in this demo address these problems:
 * xref:02-acm-workload-placement.adoc[Step 1] introduces ACM to manage placement declaratively
 * xref:03-submariner-connectivity.adoc[Step 2] deploys Submariner for encrypted cross-cloud connectivity between Azure and AWS
 * xref:04-service-mesh.adoc[Step 3] adds Service Mesh for transparent traffic routing and zero-downtime failover
+
+'''
+
+== Reset
+
+To return to the beginning of this step (before anything was created), delete the `demo-app` namespace from both clusters:
+
+[.console-input]
+[source,bash]
+----
+oc delete namespace demo-app --context cluster-a --ignore-not-found
+oc delete namespace demo-app --context cluster-b --ignore-not-found
+----

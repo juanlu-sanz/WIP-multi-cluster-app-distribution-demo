@@ -1,0 +1,13 @@
+# configmap.yaml
+# Purpose: Provides the static web content served by the demo application.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: demo-app-content
+  namespace: demo-app
+  labels:
+    app: demo-app
+    app.kubernetes.io/part-of: demo-app
+data:
+  index.html: |
+    {"message": "Hello from demo-app", "version": "1.0.0"}

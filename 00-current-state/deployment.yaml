@@ -44,3 +44,10 @@ spec:
               port: 8080
             initialDelaySeconds: 10
             periodSeconds: 15
+          volumeMounts:
+            - name: content
+              mountPath: /var/www/html
+      volumes:
+        - name: content
+          configMap:
+            name: demo-app-content
