@@ -227,6 +227,7 @@ In a real-world scenario without contexts configured, teams would <code>oc login
 <div class="listingblock console-input">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc apply -f 00-current-state/namespace.yaml --context cluster-a
+oc apply -f 00-current-state/configmap.yaml --context cluster-a
 oc apply -f 00-current-state/deployment.yaml --context cluster-a
 oc apply -f 00-current-state/service.yaml --context cluster-a
 oc apply -f 00-current-state/route.yaml --context cluster-a</code></pre>
@@ -258,7 +259,7 @@ demo-app-6d4f5b7c8-x9k2m   1/1     Running   0          30s</code></pre>
 </div>
 <div class="listingblock console-input">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">curl -s http://$(oc get route demo-app -n demo-app --context cluster-a -o jsonpath='{.status.ingress[0].host}')</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">curl -sk https://$(oc get route demo-app -n demo-app --context cluster-a -o jsonpath='{.status.ingress[0].host}')</code></pre>
 </div>
 </div>
 <div class="listingblock console-output">
@@ -303,6 +304,7 @@ demo-app-6d4f5b7c8-x9k2m   1/1     Running   0          30s</code></pre>
 <div class="listingblock console-input">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc apply -f 00-current-state/namespace.yaml --context cluster-b
+oc apply -f 00-current-state/configmap.yaml --context cluster-b
 oc apply -f 00-current-state/deployment.yaml --context cluster-b
 oc apply -f 00-current-state/service.yaml --context cluster-b
 oc apply -f 00-current-state/route.yaml --context cluster-b</code></pre>
@@ -364,6 +366,7 @@ The URL has changed. Any external system, load balancer, or DNS entry that point
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc delete -f 00-current-state/route.yaml --context cluster-a
 oc delete -f 00-current-state/service.yaml --context cluster-a
 oc delete -f 00-current-state/deployment.yaml --context cluster-a
+oc delete -f 00-current-state/configmap.yaml --context cluster-a
 oc delete -f 00-current-state/namespace.yaml --context cluster-a</code></pre>
 </div>
 </div>
@@ -442,6 +445,21 @@ oc delete -f 00-current-state/namespace.yaml --context cluster-a</code></pre>
 <p><a href="04-service-mesh.html" class="xref page">Step 3</a> adds Service Mesh for transparent traffic routing and zero-downtime failover</p>
 </li>
 </ul>
+</div>
+<hr>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_reset"><a class="anchor" href="#_reset"></a>Reset</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>To return to the beginning of this step (before anything was created), delete the <code>demo-app</code> namespace from both clusters:</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc delete namespace demo-app --context cluster-a --ignore-not-found
+oc delete namespace demo-app --context cluster-b --ignore-not-found</code></pre>
+</div>
 </div>
 </div>
 </div>
