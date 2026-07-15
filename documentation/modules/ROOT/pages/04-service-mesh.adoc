@@ -312,7 +312,14 @@ curl -s http://demo-app.demo-app.global
 [.console-output]
 [source,json]
 ----
-{"message": "Hello from demo-app", "version": "1.0.0"}
+{
+  "name": "demo-app",
+  "uri": "/",
+  "type": "HTTP",
+  "ip_addresses": ["10.x.x.x"],
+  "body": "Hello from demo-app",
+  "code": 200
+}
 ----
 ====
 
@@ -394,7 +401,7 @@ To confirm mTLS is active, attempt a request from a pod that is not part of the 
 ----
 oc run test-pod --image=registry.access.redhat.com/ubi9/ubi-minimal:latest \
   -n default --context cluster-a --restart=Never --rm -i -- \
-  curl -s http://demo-app.demo-app.svc.cluster.local:8080
+  curl -s http://demo-app.demo-app.svc.cluster.local:9090
 ----
 
 [.console-output]

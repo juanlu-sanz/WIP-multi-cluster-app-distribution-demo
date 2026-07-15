@@ -15,7 +15,7 @@ spec:
     - demo-app.demo-app.global
   location: MESH_INTERNAL
   ports:
-    - number: 8080
+    - number: 9090
       name: http
       protocol: HTTP
   resolution: DNS

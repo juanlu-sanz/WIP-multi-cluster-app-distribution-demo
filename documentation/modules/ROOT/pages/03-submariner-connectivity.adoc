@@ -234,13 +234,13 @@ Deploy a test pod on Cluster A and try to reach a service on Cluster B:
 ----
 oc run submariner-test --image=registry.access.redhat.com/ubi9/ubi-minimal:latest \
   -n demo-app --context cluster-a --restart=Never --rm -i -- \
-  curl -s --max-time 10 http://demo-app.demo-app.svc.clusterset.local:8080
+  curl -s --max-time 10 http://demo-app.demo-app.svc.clusterset.local:9090
 ----
 
 [.console-output]
 [source,json]
 ----
-{"message": "Hello from demo-app", "version": "1.0.0"}
+{"name":"demo-app","uri":"/","type":"HTTP","body":"Hello from demo-app","code":200}
 ----
 
 NOTE: The `.svc.clusterset.local` domain is provided by Submariner's Lighthouse DNS. It resolves to the remote cluster's service, proving end-to-end cross-cloud connectivity.

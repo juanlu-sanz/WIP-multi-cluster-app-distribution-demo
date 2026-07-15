@@ -337,7 +337,14 @@ curl -sk https://$(oc get route demo-app -n demo-app --context cluster-b -o json
 [.console-output]
 [source,json]
 ----
-{"message": "Hello from demo-app", "version": "1.0.0"}
+{
+  "name": "demo-app",
+  "uri": "/",
+  "type": "HTTP",
+  "ip_addresses": ["10.x.x.x"],
+  "body": "Hello from demo-app",
+  "code": 200
+}
 ----
 ====
 
