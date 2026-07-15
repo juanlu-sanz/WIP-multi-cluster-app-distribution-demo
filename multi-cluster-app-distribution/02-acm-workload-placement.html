@@ -745,6 +745,34 @@ To delay automatic eviction (avoiding reaction to brief network disruptions), ad
 </tr>
 </tbody>
 </table>
+<hr>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_reset"><a class="anchor" href="#_reset"></a>Reset</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>To return to the beginning of this step (before anything was created), run the following commands. The ApplicationSet delete must complete first because its finalizer cascades: it deletes the Argo CD Applications, which prune all deployed workloads from the managed clusters.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc delete applicationset demo-app -n openshift-gitops --context hub --ignore-not-found --wait
+
+oc delete placement demo-app-placement all-production-clusters -n openshift-gitops --context hub --ignore-not-found
+oc delete managedclustersetbinding production-clusters -n openshift-gitops --context hub --ignore-not-found
+
+oc patch gitopscluster gitops-clusters -n openshift-gitops --context hub --type merge \
+  -p '{"spec":{"placementRef":{"name":"all-openshift-clusters"}}}'
+
+oc label managedcluster cluster-a cluster-b \
+  cluster.open-cluster-management.io/clusterset=default region- environment- --overwrite --context hub
+
+oc delete managedclusterset production-clusters --context hub --ignore-not-found
+
+oc delete namespace demo-app --context cluster-a --ignore-not-found
+oc delete namespace demo-app --context cluster-b --ignore-not-found</code></pre>
+</div>
+</div>
 </div>
 </div>
 <nav class="pagination">

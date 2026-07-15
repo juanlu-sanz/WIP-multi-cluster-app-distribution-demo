@@ -774,7 +774,7 @@ Demo platform clusters may use default CIDRs that overlap. If any CIDRs overlap,
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">export HUB_API_URL="https://api.hub.example.com:6443"
 export CLUSTER_A_API_URL="https://api.cluster-a.example.com:6443"
 export CLUSTER_B_API_URL="https://api.cluster-b.example.com:6443"
-export GIT_ORG="your-github-org"
+export GIT_REPO_URL="https://github.com/your-org/multi-cluster-app-distribution-demo.git"
 export REMOTE_INGRESS_IP="&lt;set after Submariner - see step 02&gt;"</code></pre>
 </div>
 </div>
@@ -808,9 +808,9 @@ export REMOTE_INGRESS_IP="&lt;set after Submariner - see step 02&gt;"</code></pr
 <td class="tableblock halign-left valign-top"><p class="tableblock">API server URL for Cluster B (Azure)</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>GIT_ORG</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>GIT_REPO_URL</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>01-acm-workload-placement/applicationset.yaml</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">GitHub org/user for the ApplicationSet Git source repository</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Full HTTPS clone URL of the Git repository containing the demo manifests</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>REMOTE_INGRESS_IP</code></p></td>
@@ -826,7 +826,7 @@ export REMOTE_INGRESS_IP="&lt;set after Submariner - see step 02&gt;"</code></pr
 <i class="fa icon-tip" title="Tip"></i>
 </td>
 <td class="content">
-If you already exported <code>HUB_API_URL</code>, <code>CLUSTER_A_API_URL</code>, and <code>CLUSTER_B_API_URL</code> in step 2, you only need to add <code>GIT_ORG</code>. <code>REMOTE_INGRESS_IP</code> is determined during the Submariner step.
+If you already exported <code>HUB_API_URL</code>, <code>CLUSTER_A_API_URL</code>, and <code>CLUSTER_B_API_URL</code> in step 2, you only need to add <code>GIT_REPO_URL</code>. <code>REMOTE_INGRESS_IP</code> is determined during the Submariner step.
 </td>
 </tr>
 </table>
@@ -851,7 +851,7 @@ If you already exported <code>HUB_API_URL</code>, <code>CLUSTER_A_API_URL</code>
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">export HUB_API_URL="https://api.hub.example.com:6443"
 export CLUSTER_A_API_URL="https://api.cluster-a.example.com:6443"
 export CLUSTER_B_API_URL="https://api.cluster-b.example.com:6443"
-export GIT_ORG="your-github-org"
+export GIT_REPO_URL="https://github.com/your-org/multi-cluster-app-distribution-demo.git"
 export REMOTE_INGRESS_IP="&lt;set after Submariner - see step 02&gt;"</code></pre>
 </div>
 </div>
