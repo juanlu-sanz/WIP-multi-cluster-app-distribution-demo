@@ -16,7 +16,7 @@ NOTE: In a real-world scenario without contexts configured, teams would `oc logi
 [#deploy-cluster-a]
 === 1. Deploy the sample application to Cluster A
 
-*What:* Deploy a stateless web application (link:https://github.com/stefanprodan/podinfo[podinfo]) directly to a single cluster using `oc apply`. Podinfo displays pod name, namespace, node, and other runtime details in its web UI - making it easy to see which cluster is serving traffic.
+*What:* Deploy a stateless web application (link:https://github.com/nicholasjackson/fake-service[fake-service]) directly to a single cluster using `oc apply`. Fake-service displays the service name, upstream calls, and request details in a web UI at `/ui/` - making it easy to see which cluster is serving traffic.
 
 *Why:* This represents the current workflow - each cluster is targeted individually, with no central control plane aware of where the application lives.
 
@@ -57,24 +57,24 @@ oc get route demo-app -n demo-app --context cluster-a -o jsonpath='{.status.ingr
 demo-app-demo-app.apps.cluster-a.example.com
 ----
 
-Open the route URL in a browser to see the podinfo web UI displaying the pod name, namespace, and cluster details.
+Open the route URL in a browser and append `/ui/` to see the fake-service web UI displaying the service name, request path, and response details.
 
 [.console-input]
 [source,bash]
 ----
-curl -sk https://$(oc get route demo-app -n demo-app --context cluster-a -o jsonpath='{.status.ingress[0].host}')/api/info
+curl -sk https://$(oc get route demo-app -n demo-app --context cluster-a -o jsonpath='{.status.ingress[0].host}')
 ----
 
 [.console-output]
 [source,json]
 ----
 {
-  "hostname": "demo-app-6d4f5b7c8-x9k2m",
-  "version": "6.x.x",
-  "message": "demo-app (manual deployment)",
-  "goos": "linux",
-  "goarch": "amd64",
-  ...
+  "name": "demo-app",
+  "uri": "/",
+  "type": "HTTP",
+  "ip_addresses": ["10.x.x.x"],
+  "body": "Hello from demo-app",
+  "code": 200
 }
 ----
 ====

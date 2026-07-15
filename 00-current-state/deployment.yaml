@@ -1,7 +1,7 @@
 # deployment.yaml
-# Purpose: Deploys podinfo, a stateless web app that displays pod name,
-# namespace, node, and other runtime details - useful for visualizing
-# which cluster is serving traffic during multi-cluster demos.
+# Purpose: Deploys fake-service, a stateless web app that displays service name,
+# namespace, node, upstream calls, and request details in a web UI - useful for
+# visualizing which cluster is serving traffic during multi-cluster demos.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -22,13 +22,17 @@ spec:
     spec:
       containers:
         - name: demo-app
-          image: ghcr.io/stefanprodan/podinfo:latest
+          image: nicholasjackson/fake-service:v0.26.2
           ports:
-            - containerPort: 9898
+            - containerPort: 9090
               protocol: TCP
           env:
-            - name: PODINFO_UI_MESSAGE
-              value: "demo-app (manual deployment)"
+            - name: NAME
+              value: "demo-app"
+            - name: MESSAGE
+              value: "Hello from demo-app"
+            - name: LISTEN_ADDR
+              value: "0.0.0.0:9090"
           resources:
             requests:
               cpu: 100m
@@ -38,13 +42,13 @@ spec:
               memory: 256Mi
           readinessProbe:
             httpGet:
-              path: /readyz
-              port: 9898
+              path: /ready
+              port: 9090
             initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /healthz
-              port: 9898
+              path: /health
+              port: 9090
             initialDelaySeconds: 10
             periodSeconds: 15
