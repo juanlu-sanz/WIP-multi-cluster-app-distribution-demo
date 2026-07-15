@@ -254,13 +254,13 @@
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>hub</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">ARO cluster</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Cluster A (managed cluster - Azure)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">ROSA HCP cluster</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Cluster A (managed cluster - AWS)</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cluster-a</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">ROSA HCP cluster</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Cluster B (managed cluster - AWS)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">ARO cluster</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Cluster B (managed cluster - Azure)</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cluster-b</code></p></td>
 </tr>
 </tbody>
@@ -298,14 +298,14 @@
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>kubeadmin</code> / password from provisioning page</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Cluster A (ARO)</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Provided by demo platform</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>kubeadmin</code> / password from provisioning page</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Cluster B (ROSA HCP)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Cluster A (ROSA HCP)</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Provided by demo platform</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>cluster-admin</code> / password from provisioning page</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Cluster B (ARO)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Provided by demo platform</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>kubeadmin</code> / password from provisioning page</p></td>
 </tr>
 </tbody>
 </table>
@@ -326,11 +326,11 @@ If the demo platform provides a ready-made <code>oc login</code> command, you ca
 </div>
 <div class="listingblock console-input">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># ARO clusters (Hub / Cluster A) - requires az CLI logged in
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># ARO clusters (Hub / Cluster B) - requires az CLI logged in
 az aro show --resource-group &lt;RG&gt; --name &lt;CLUSTER_NAME&gt; --query apiserverProfile.url -o tsv
 az aro list-credentials --resource-group &lt;RG&gt; --name &lt;CLUSTER_NAME&gt; --query kubeadminPassword -o tsv
 
-# ROSA HCP (Cluster B) - requires rosa CLI logged in
+# ROSA HCP (Cluster A) - requires rosa CLI logged in
 rosa describe cluster --cluster=&lt;CLUSTER_NAME&gt; --output json | jq -r '.api.url'
 rosa create admin --cluster=&lt;CLUSTER_NAME&gt; --yes</code></pre>
 </div>
@@ -363,10 +363,10 @@ export CLUSTER_B_API_URL="https://api.cluster-b.example.com:6443"</code></pre>
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc login "$HUB_API_URL" --username kubeadmin --password &lt;HUB_PASSWORD&gt; --insecure-skip-tls-verify=true
 oc config rename-context "$(oc config current-context)" hub
 
-oc login "$CLUSTER_A_API_URL" --username kubeadmin --password &lt;CLUSTER_A_PASSWORD&gt; --insecure-skip-tls-verify=true
+oc login "$CLUSTER_A_API_URL" --username cluster-admin --password &lt;CLUSTER_A_PASSWORD&gt; --insecure-skip-tls-verify=true
 oc config rename-context "$(oc config current-context)" cluster-a
 
-oc login "$CLUSTER_B_API_URL" --username cluster-admin --password &lt;CLUSTER_B_PASSWORD&gt; --insecure-skip-tls-verify=true
+oc login "$CLUSTER_B_API_URL" --username kubeadmin --password &lt;CLUSTER_B_PASSWORD&gt; --insecure-skip-tls-verify=true
 oc config rename-context "$(oc config current-context)" cluster-b</code></pre>
 </div>
 </div>
@@ -565,6 +565,38 @@ Run all the commands in this step twice - first with <code>CLUSTER_NAME=cluster-
 </tr>
 </table>
 </div>
+<details>
+<summary class="title">Alternative: Import clusters via the ACM web console</summary>
+<div class="content">
+<div class="paragraph">
+<p>Instead of using the CLI, you can import managed clusters through the ACM web console:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Navigate to <strong>Clusters &gt; Import an existing cluster</strong> in the ACM Hub console.</p>
+</li>
+<li>
+<p>Fill in the <strong>Name</strong> (e.g. <code>cluster-a</code>), select an optional <strong>Cluster set</strong>, and choose the <strong>Import mode</strong> that lets you enter the server URL and API token.</p>
+</li>
+<li>
+<p>Provide the <strong>Server URL</strong> and <strong>API Token</strong> for the managed cluster.</p>
+</li>
+<li>
+<p>Click through the <strong>Automation</strong> and <strong>Review</strong> steps to complete the import.</p>
+</li>
+</ol>
+</div>
+<div class="imageblock unresolved">
+<div class="content">
+<img src="acm-import-cluster-web-ui.png" alt="ACM web console - Import an existing cluster">
+</div>
+</div>
+<div class="paragraph">
+<p>Repeat for <code>cluster-b</code>.</p>
+</div>
+</div>
+</details>
 <details>
 <summary class="title">Verify: both clusters are available in ACM</summary>
 <div class="content">
@@ -768,12 +800,12 @@ export REMOTE_INGRESS_IP="&lt;set after Submariner - see step 02&gt;"</code></pr
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>CLUSTER_A_API_URL</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">This page (login)</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">API server URL for Cluster A (Azure)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">API server URL for Cluster A (AWS)</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>CLUSTER_B_API_URL</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">This page (login)</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">API server URL for Cluster B (AWS)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">API server URL for Cluster B (Azure)</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>GIT_ORG</code></p></td>

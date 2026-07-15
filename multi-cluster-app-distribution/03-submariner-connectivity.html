@@ -179,7 +179,7 @@
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>This step deploys Submariner via ACM to establish encrypted L3 connectivity between Cluster A (Azure) and Cluster B (AWS). Submariner creates an IPsec tunnel between the clusters, enabling pods and services to communicate across cloud providers without exposing anything to the public internet. This provides the network foundation that <a href="04-service-mesh.html" class="xref page">Step 3 (Service Mesh)</a> builds on for cross-cluster traffic management.</p>
+<p>This step deploys Submariner via ACM to establish encrypted L3 connectivity between Cluster A (AWS) and Cluster B (Azure). Submariner creates an IPsec tunnel between the clusters, enabling pods and services to communicate across cloud providers without exposing anything to the public internet. This provides the network foundation that <a href="04-service-mesh.html" class="xref page">Step 3 (Service Mesh)</a> builds on for cross-cluster traffic management.</p>
 </div>
 </div>
 </div>
@@ -223,27 +223,27 @@ oc get secret cluster-b-cloud-creds -n cluster-b --context hub</code></pre>
 <p>If either secret is missing, create it:</p>
 </div>
 <div class="paragraph">
-<p><strong>Cluster A (Azure):</strong></p>
+<p><strong>Cluster A (AWS):</strong></p>
 </div>
 <div class="listingblock console-input">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc create secret generic cluster-a-cloud-creds -n cluster-a --context hub \
+  --from-literal=aws_access_key_id="&lt;AWS_ACCESS_KEY_ID&gt;" \
+  --from-literal=aws_secret_access_key="&lt;AWS_SECRET_ACCESS_KEY&gt;"</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p><strong>Cluster B (Azure):</strong></p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc create secret generic cluster-b-cloud-creds -n cluster-b --context hub \
   --from-literal=osServicePrincipal.json='{
     "clientId": "&lt;AZURE_CLIENT_ID&gt;",
     "clientSecret": "&lt;AZURE_CLIENT_SECRET&gt;",
     "tenantId": "&lt;AZURE_TENANT_ID&gt;",
     "subscriptionId": "&lt;AZURE_SUBSCRIPTION_ID&gt;"
   }'</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p><strong>Cluster B (AWS):</strong></p>
-</div>
-<div class="listingblock console-input">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc create secret generic cluster-b-cloud-creds -n cluster-b --context hub \
-  --from-literal=aws_access_key_id="&lt;AWS_ACCESS_KEY_ID&gt;" \
-  --from-literal=aws_secret_access_key="&lt;AWS_SECRET_ACCESS_KEY&gt;"</code></pre>
 </div>
 </div>
 <div class="admonitionblock note">
@@ -253,7 +253,7 @@ oc get secret cluster-b-cloud-creds -n cluster-b --context hub</code></pre>
 <i class="fa icon-note" title="Note"></i>
 </td>
 <td class="content">
-These credentials need permission to modify NSG rules (Azure) and security group rules (AWS). The minimum required permissions are documented in the <a href="https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.11/html/add-ons/submariner#preparing-selected-hosts-to-deploy-submariner">Submariner cloud preparation guide</a>.
+These credentials need permission to modify security group rules (AWS) and NSG rules (Azure). The minimum required permissions are documented in the <a href="https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.11/html/add-ons/submariner#preparing-selected-hosts-to-deploy-submariner">Submariner cloud preparation guide</a>.
 </td>
 </tr>
 </table>
@@ -332,7 +332,7 @@ submariner-broker   10s</code></pre>
 <p><strong>What:</strong> Create SubmarinerConfig CRs that tell ACM how to prepare each managed cluster for Submariner - including which credentials to use and how many gateway nodes to designate.</p>
 </div>
 <div class="paragraph">
-<p><strong>Why:</strong> Each cloud provider needs different preparation. On Azure, Submariner opens NSG rules for IPsec traffic (UDP 4500, UDP 500). On AWS, it opens security group rules for the same ports. The SubmarinerConfig also designates worker nodes as gateway nodes, which handle the encrypted tunnel endpoints.</p>
+<p><strong>Why:</strong> Each cloud provider needs different preparation. On AWS, Submariner opens security group rules for IPsec traffic (UDP 4500, UDP 500). On Azure, it opens NSG rules for the same ports. The SubmarinerConfig also designates worker nodes as gateway nodes, which handle the encrypted tunnel endpoints.</p>
 </div>
 <div class="listingblock console-input">
 <div class="content">
@@ -420,7 +420,7 @@ cluster-b-gateway-0     active      1             60s</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>The <code>CONNECTIONS: 1</code> confirms the IPsec tunnel is established between Azure and AWS.</p>
+<p>The <code>CONNECTIONS: 1</code> confirms the IPsec tunnel is established between AWS and Azure.</p>
 </div>
 </div>
 </details>
@@ -432,7 +432,7 @@ cluster-b-gateway-0     active      1             60s</code></pre>
 <p><strong>What:</strong> Run a connectivity test from a pod on one cluster to a service on the other cluster, proving the Submariner tunnel works.</p>
 </div>
 <div class="paragraph">
-<p><strong>Why:</strong> Before proceeding to Step 3 (Service Mesh), we need to confirm that the L3 tunnel is operational and that pods on Cluster A (Azure) can reach pods on Cluster B (AWS) and vice versa. This is the foundation that all cross-cluster traffic management depends on.</p>
+<p><strong>Why:</strong> Before proceeding to Step 3 (Service Mesh), we need to confirm that the L3 tunnel is operational and that pods on Cluster A (AWS) can reach pods on Cluster B (Azure) and vice versa. This is the foundation that all cross-cluster traffic management depends on.</p>
 </div>
 <div class="paragraph">
 <p>Deploy a test pod on Cluster A and try to reach a service on Cluster B:</p>
@@ -480,15 +480,15 @@ The <code>.svc.clusterset.local</code> domain is provided by Submariner&#8217;s 
 <div class="listingblock console-output">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">CLUSTER ID                    ENDPOINT IP     PUBLIC IP       CABLE DRIVER   TYPE
-cluster-a                     10.0.x.x        &lt;azure-ip&gt;      libreswan      local
-cluster-b                     10.1.x.x        &lt;aws-ip&gt;         libreswan      remote
+cluster-a                     10.1.x.x        &lt;aws-ip&gt;        libreswan      local
+cluster-b                     10.0.x.x        &lt;azure-ip&gt;       libreswan      remote
 
 GATEWAY                       CLUSTER         REMOTE IP       NAT   CABLE DRIVER   SUBNETS                    STATUS   RTT avg
-cluster-b-gateway-0           cluster-b       &lt;aws-ip&gt;         yes   libreswan      10.128.0.0/14, ...        connected   5.2ms</code></pre>
+cluster-b-gateway-0           cluster-b       &lt;azure-ip&gt;       yes   libreswan      10.128.0.0/14, ...        connected   5.2ms</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>The <code>connected</code> status and RTT measurement confirm the tunnel is active between Azure and AWS.</p>
+<p>The <code>connected</code> status and RTT measurement confirm the tunnel is active between AWS and Azure.</p>
 </div>
 </div>
 </details>
@@ -513,7 +513,7 @@ cluster-b-gateway-0           cluster-b       &lt;aws-ip&gt;         yes   libre
 <tbody>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">No network path between clouds</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">IPsec tunnel connects Azure VNet and AWS VPC at the pod/service CIDR level</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">IPsec tunnel connects AWS VPC and Azure VNet at the pod/service CIDR level</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Public IP exposure for cross-cluster traffic</p></td>
@@ -525,7 +525,7 @@ cluster-b-gateway-0           cluster-b       &lt;aws-ip&gt;         yes   libre
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Cloud firewall complexity</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Submariner automatically opens the required NSG rules (Azure) and security group rules (AWS)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Submariner automatically opens the required security group rules (AWS) and NSG rules (Azure)</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Multi-cluster service discovery</p></td>
