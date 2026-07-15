@@ -10,7 +10,7 @@ metadata:
   name: demo-app
 spec:
   port:
-    targetPort: 8080
+    targetPort: 9898
   to:
     kind: Service
     name: demo-app

@@ -16,7 +16,7 @@ NOTE: In a real-world scenario without contexts configured, teams would `oc logi
 [#deploy-cluster-a]
 === 1. Deploy the sample application to Cluster A
 
-*What:* Deploy a simple stateless HTTP application directly to a single cluster using `oc apply`.
+*What:* Deploy a stateless web application (link:https://github.com/stefanprodan/podinfo[podinfo]) directly to a single cluster using `oc apply`. Podinfo displays pod name, namespace, node, and other runtime details in its web UI - making it easy to see which cluster is serving traffic.
 
 *Why:* This represents the current workflow - each cluster is targeted individually, with no central control plane aware of where the application lives.
 
@@ -24,7 +24,6 @@ NOTE: In a real-world scenario without contexts configured, teams would `oc logi
 [source,bash,subs="+macros,+attributes"]
 ----
 oc apply -f 00-current-state/namespace.yaml --context cluster-a
-oc apply -f 00-current-state/configmap.yaml --context cluster-a
 oc apply -f 00-current-state/deployment.yaml --context cluster-a
 oc apply -f 00-current-state/service.yaml --context cluster-a
 oc apply -f 00-current-state/route.yaml --context cluster-a
@@ -58,16 +57,25 @@ oc get route demo-app -n demo-app --context cluster-a -o jsonpath='{.status.ingr
 demo-app-demo-app.apps.cluster-a.example.com
 ----
 
+Open the route URL in a browser to see the podinfo web UI displaying the pod name, namespace, and cluster details.
+
 [.console-input]
 [source,bash]
 ----
-curl -sk https://$(oc get route demo-app -n demo-app --context cluster-a -o jsonpath='{.status.ingress[0].host}')
+curl -sk https://$(oc get route demo-app -n demo-app --context cluster-a -o jsonpath='{.status.ingress[0].host}')/api/info
 ----
 
 [.console-output]
 [source,json]
 ----
-{"message": "Hello from demo-app", "version": "1.0.0"}
+{
+  "hostname": "demo-app-6d4f5b7c8-x9k2m",
+  "version": "6.x.x",
+  "message": "demo-app (manual deployment)",
+  "goos": "linux",
+  "goarch": "amd64",
+  ...
+}
 ----
 ====
 
@@ -93,7 +101,6 @@ Assume Cluster A needs maintenance. The application must move to Cluster B.
 [source,bash,subs="+macros,+attributes"]
 ----
 oc apply -f 00-current-state/namespace.yaml --context cluster-b
-oc apply -f 00-current-state/configmap.yaml --context cluster-b
 oc apply -f 00-current-state/deployment.yaml --context cluster-b
 oc apply -f 00-current-state/service.yaml --context cluster-b
 oc apply -f 00-current-state/route.yaml --context cluster-b
@@ -147,7 +154,6 @@ Go back to Cluster A and remove the old deployment:
 oc delete -f 00-current-state/route.yaml --context cluster-a
 oc delete -f 00-current-state/service.yaml --context cluster-a
 oc delete -f 00-current-state/deployment.yaml --context cluster-a
-oc delete -f 00-current-state/configmap.yaml --context cluster-a
 oc delete -f 00-current-state/namespace.yaml --context cluster-a
 ----
 

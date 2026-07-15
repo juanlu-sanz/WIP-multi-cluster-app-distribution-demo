@@ -1,6 +1,7 @@
 # deployment.yaml
-# Purpose: Deploys a simple HTTP application that returns a JSON greeting.
-# This represents any stateless workload that needs to be migrated between clusters.
+# Purpose: Deploys podinfo, a stateless web app that displays pod name,
+# namespace, node, and other runtime details - useful for visualizing
+# which cluster is serving traffic during multi-cluster demos.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -21,10 +22,13 @@ spec:
     spec:
       containers:
         - name: demo-app
-          image: registry.access.redhat.com/ubi9/httpd-24:latest
+          image: ghcr.io/stefanprodan/podinfo:latest
           ports:
-            - containerPort: 8080
+            - containerPort: 9898
               protocol: TCP
+          env:
+            - name: PODINFO_UI_MESSAGE
+              value: "demo-app (manual deployment)"
           resources:
             requests:
               cpu: 100m
@@ -34,20 +38,13 @@ spec:
               memory: 256Mi
           readinessProbe:
             httpGet:
-              path: /
-              port: 8080
+              path: /readyz
+              port: 9898
             initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /
-              port: 8080
+              path: /healthz
+              port: 9898
             initialDelaySeconds: 10
             periodSeconds: 15
-          volumeMounts:
-            - name: content
-              mountPath: /var/www/html
-      volumes:
-        - name: content
-          configMap:
-            name: demo-app-content
