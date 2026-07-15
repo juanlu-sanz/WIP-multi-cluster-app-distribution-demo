@@ -299,6 +299,16 @@ cluster-b   true           https://api.cluster-b.example.com     True     True  
 oc apply -f 01-acm-workload-placement/managedclusterset-binding.yaml --context hub</code></pre>
 </div>
 </div>
+<div class="paragraph">
+<p>Assign both managed clusters to the new set (a cluster can only belong to one set at a time):</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc label managedcluster cluster-a cluster-b \
+  cluster.open-cluster-management.io/clusterset=production-clusters \
+  --overwrite --context hub</code></pre>
+</div>
+</div>
 <details>
 <summary class="title">Verify: ManagedClusterSet created and bound</summary>
 <div class="content">
