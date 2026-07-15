@@ -75,6 +75,16 @@ oc apply -f 01-acm-workload-placement/managedclusterset.yaml --context hub
 oc apply -f 01-acm-workload-placement/managedclusterset-binding.yaml --context hub
 ----
 
+Assign both managed clusters to the new set (a cluster can only belong to one set at a time):
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc label managedcluster cluster-a cluster-b \
+  cluster.open-cluster-management.io/clusterset=production-clusters \
+  --overwrite --context hub
+----
+
 .Verify: ManagedClusterSet created and bound
 [%collapsible]
 ====
