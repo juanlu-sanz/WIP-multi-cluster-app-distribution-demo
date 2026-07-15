@@ -2,7 +2,7 @@
 # Purpose: Deploys the demo application to whichever clusters the Placement selects.
 # Uses the clusterDecisionResource generator to read from ACM PlacementDecisions,
 # then templates an ArgoCD Application per selected cluster.
-# Requires $GIT_ORG to be exported before applying (see 00-setup.adoc).
+# Requires $GIT_REPO_URL to be exported before applying (see 00-setup.adoc).
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
@@ -26,7 +26,7 @@ spec:
     spec:
       project: default
       source:
-        repoURL: https://github.com/${GIT_ORG}/multi-cluster-app-distribution-demo.git
+        repoURL: ${GIT_REPO_URL}
         targetRevision: main
         path: kustomize/overlays/production
       destination:

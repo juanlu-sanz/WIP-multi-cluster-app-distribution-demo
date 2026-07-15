@@ -483,7 +483,7 @@ WARNING: Demo platform clusters may use default CIDRs that overlap. If any CIDRs
 export HUB_API_URL="https://api.hub.example.com:6443"
 export CLUSTER_A_API_URL="https://api.cluster-a.example.com:6443"
 export CLUSTER_B_API_URL="https://api.cluster-b.example.com:6443"
-export GIT_ORG="your-github-org"
+export GIT_REPO_URL="https://github.com/your-org/multi-cluster-app-distribution-demo.git"
 export REMOTE_INGRESS_IP="<set after Submariner - see step 02>"
 ----
 
@@ -503,16 +503,16 @@ export REMOTE_INGRESS_IP="<set after Submariner - see step 02>"
 | This page (login)
 | API server URL for Cluster B (Azure)
 
-| `GIT_ORG`
+| `GIT_REPO_URL`
 | `01-acm-workload-placement/applicationset.yaml`
-| GitHub org/user for the ApplicationSet Git source repository
+| Full HTTPS clone URL of the Git repository containing the demo manifests
 
 | `REMOTE_INGRESS_IP`
 | `03-service-mesh-traffic-management/service-entry.yaml`
 | Ingress gateway IP of the peer cluster for cross-cluster mesh routing. With Submariner (Step 2), this can be an internal cluster IP reachable through the tunnel.
 |===
 
-TIP: If you already exported `HUB_API_URL`, `CLUSTER_A_API_URL`, and `CLUSTER_B_API_URL` in step 2, you only need to add `GIT_ORG`. `REMOTE_INGRESS_IP` is determined during the Submariner step.
+TIP: If you already exported `HUB_API_URL`, `CLUSTER_A_API_URL`, and `CLUSTER_B_API_URL` in step 2, you only need to add `GIT_REPO_URL`. `REMOTE_INGRESS_IP` is determined during the Submariner step.
 
 You are now ready to start the demo from xref:01-current-state.adoc[Step 0].
 
@@ -531,7 +531,7 @@ If someone else already provisioned and configured the clusters (e.g. via `setup
 export HUB_API_URL="https://api.hub.example.com:6443"
 export CLUSTER_A_API_URL="https://api.cluster-a.example.com:6443"
 export CLUSTER_B_API_URL="https://api.cluster-b.example.com:6443"
-export GIT_ORG="your-github-org"
+export GIT_REPO_URL="https://github.com/your-org/multi-cluster-app-distribution-demo.git"
 export REMOTE_INGRESS_IP="<set after Submariner - see step 02>"
 ----
 
