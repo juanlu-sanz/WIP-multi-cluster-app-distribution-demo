@@ -1,26 +1,466 @@
 = Cluster Setup
 include::_attributes.adoc[]
 
-Before starting the tutorial, log in to all three clusters, rename the contexts, and export the workshop variables. This only needs to be done once per terminal session.
+Before starting the tutorial you need three OpenShift clusters with the right operators installed, `oc` contexts configured, and workshop variables exported. This page covers two paths:
 
-NOTE: If you used `setup/post-install.sh`, the contexts and logins are already configured.
+* **Option A - Demo Platform (pre-provisioned clusters):** order clusters from the link:https://demo.redhat.com[Red Hat Demo Platform], then import and wire them together.
+* **Option B - Quick login:** if someone else already set up the clusters (e.g. via `setup/post-install.sh` or Terraform), just log in and start.
 
-TIP: *Red Hatters:* To provision the clusters from scratch, see the `setup/` directory for Terraform automation (ARO on Azure + ROSA HCP on AWS). The setup script also installs all required operators and configures the contexts below.
+TIP: *Red Hatters:* To provision the clusters from scratch with Terraform, see the `setup/` directory. The `post-install.sh` script installs all operators, imports clusters, and configures everything below automatically.
 
 [#prerequisites]
 == Prerequisites
 
-* An ACM Hub cluster with at least two managed clusters joined (Hub + Cluster A on Azure, Cluster B on AWS)
-* `oc` CLI authenticated as cluster-admin on the Hub
-* Cluster admin access to both managed clusters
-* OpenShift GitOps Operator installed on the Hub (for step 01+)
-* Cloud provider credentials for both managed clusters (for step 02 - Submariner)
-* OpenShift Service Mesh {mesh-version} Operator installed on all clusters (for step 03)
+* `oc` CLI ({ocp-version}) - link:https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/[download]
+* Cluster admin access to all three clusters
+* A GitHub account (for the ApplicationSet in step 01)
+
+[#option-a-demo-platform]
+== Option A - Using Pre-Provisioned Clusters (Demo Platform)
+
+If you have clusters provisioned through the link:https://demo.redhat.com[Red Hat Demo Platform] (or similar), follow this section to gather credentials, import managed clusters into ACM, and install the required operators.
+
+=== Cluster mapping
+
+Order the following catalog items from the demo platform:
+
+[cols="2,2,2",options="header"]
+|===
+| Demo Platform Catalog Item | Demo Role | `oc` Context
+
+| ACM Hub cluster
+| Hub (ACM control plane, GitOps)
+| `hub`
+
+| ARO cluster
+| Cluster A (managed cluster - Azure)
+| `cluster-a`
+
+| ROSA HCP cluster
+| Cluster B (managed cluster - AWS)
+| `cluster-b`
+|===
+
+'''
+
+[#gather-credentials]
+=== 1. Gather API URLs and credentials
+
+*What:* Collect the API server URL and admin password for each cluster from the demo platform provisioning page or email.
+
+*Why:* You need these to log in with `oc` and configure the contexts used throughout the workshop.
+
+Each cluster's credentials are displayed on the demo platform provisioning page. Collect the following:
+
+[cols="2,3,3",options="header"]
+|===
+| Cluster | API URL | Credentials
+
+| Hub (ACM)
+| Provided by demo platform
+| `kubeadmin` / password from provisioning page
+
+| Cluster A (ARO)
+| Provided by demo platform
+| `kubeadmin` / password from provisioning page
+
+| Cluster B (ROSA HCP)
+| Provided by demo platform
+| `cluster-admin` / password from provisioning page
+|===
+
+TIP: If the demo platform provides a ready-made `oc login` command, you can copy it directly and skip to the context rename in step 2.
+
+If you need to retrieve the values manually using the CLI:
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+# ARO clusters (Hub / Cluster A) - requires az CLI logged in
+az aro show --resource-group <RG> --name <CLUSTER_NAME> --query apiserverProfile.url -o tsv
+az aro list-credentials --resource-group <RG> --name <CLUSTER_NAME> --query kubeadminPassword -o tsv
+
+# ROSA HCP (Cluster B) - requires rosa CLI logged in
+rosa describe cluster --cluster=<CLUSTER_NAME> --output json | jq -r '.api.url'
+rosa create admin --cluster=<CLUSTER_NAME> --yes
+----
+
+'''
+
+[#login-contexts]
+=== 2. Log in and configure contexts
+
+*What:* Log in to all three clusters and rename the `oc` contexts to `hub`, `cluster-a`, and `cluster-b`.
+
+*Why:* Every command in this workshop uses an explicit `--context` flag. Consistent context names let you copy-paste commands without modification.
+
+Export the API URLs (replace with your actual values):
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+export HUB_API_URL="https://api.hub.example.com:6443"
+export CLUSTER_A_API_URL="https://api.cluster-a.example.com:6443"
+export CLUSTER_B_API_URL="https://api.cluster-b.example.com:6443"
+----
+
+Log in and rename each context:
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc login "$HUB_API_URL" --username kubeadmin --password <HUB_PASSWORD> --insecure-skip-tls-verify=true
+oc config rename-context "$(oc config current-context)" hub
+
+oc login "$CLUSTER_A_API_URL" --username kubeadmin --password <CLUSTER_A_PASSWORD> --insecure-skip-tls-verify=true
+oc config rename-context "$(oc config current-context)" cluster-a
+
+oc login "$CLUSTER_B_API_URL" --username cluster-admin --password <CLUSTER_B_PASSWORD> --insecure-skip-tls-verify=true
+oc config rename-context "$(oc config current-context)" cluster-b
+----
+
+.Verify: three named contexts exist
+[%collapsible]
+====
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc config get-contexts
+----
+
+[.console-output]
+[source,bash]
+----
+CURRENT   NAME        CLUSTER                    AUTHINFO
+          hub         api-hub:6443               admin/api-hub:6443
+          cluster-a   api-cluster-a:6443         admin/api-cluster-a:6443
+*         cluster-b   api-cluster-b:6443         admin/api-cluster-b:6443
+----
+====
+
+'''
+
+[#verify-acm]
+=== 3. Verify ACM on the Hub
+
+*What:* Confirm that ACM is installed and ready on the Hub cluster.
+
+*Why:* The demo platform hub comes with ACM pre-installed. All subsequent steps depend on a healthy `MultiClusterHub`.
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc get multiclusterhub -n open-cluster-management --context hub
+----
+
+The status should show `Running`. If it is not ready yet, wait a few minutes and check again.
+
+'''
+
+[#install-gitops]
+=== 4. Install OpenShift GitOps on the Hub
+
+*What:* Check whether OpenShift GitOps is installed on the Hub and install it if missing.
+
+*Why:* Step 01 of the demo uses an ApplicationSet on the Hub's Argo CD instance to push workloads to managed clusters.
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc get deployment openshift-gitops-server -n openshift-gitops --context hub
+----
+
+If the deployment exists, GitOps is already installed - skip to the next step.
+
+If GitOps is not installed, create the Subscription:
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+cat <<'EOF' | oc apply --context hub -f -
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: openshift-gitops-operator
+  namespace: openshift-operators
+spec:
+  channel: latest
+  name: openshift-gitops-operator
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+  installPlanApproval: Automatic
+EOF
+----
+
+Wait for the operator to roll out:
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+until oc get deployment openshift-gitops-server -n openshift-gitops --context hub &>/dev/null; do sleep 10; done
+oc rollout status deployment/openshift-gitops-server -n openshift-gitops --context hub --timeout=300s
+----
+
+.Verify: GitOps server is running
+[%collapsible]
+====
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc get deployment openshift-gitops-server -n openshift-gitops --context hub
+----
+
+[.console-output]
+[source,bash]
+----
+NAME                      READY   UP-TO-DATE   AVAILABLE   AGE
+openshift-gitops-server   1/1     1            1           2m
+----
+====
+
+'''
+
+[#import-clusters]
+=== 5. Import managed clusters into ACM
+
+*What:* Register Cluster A and Cluster B as ACM managed clusters and deploy the Klusterlet agent on each.
+
+*Why:* ACM needs the managed clusters imported before it can place workloads, configure Submariner, or manage policies on them.
+
+Repeat the following for each cluster. Start with `cluster-a`, then run again with `cluster-b`:
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+CLUSTER_NAME="cluster-a"
+CLUSTER_CONTEXT="cluster-a"
+----
+
+Create the `ManagedCluster` on the Hub:
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+cat <<EOF | oc apply --context hub -f -
+apiVersion: cluster.open-cluster-management.io/v1
+kind: ManagedCluster
+metadata:
+  name: $CLUSTER_NAME
+spec:
+  hubAcceptsClient: true
+EOF
+----
+
+Create the `KlusterletAddonConfig`:
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+cat <<EOF | oc apply --context hub -f -
+apiVersion: agent.open-cluster-management.io/v1
+kind: KlusterletAddonConfig
+metadata:
+  name: $CLUSTER_NAME
+  namespace: $CLUSTER_NAME
+spec:
+  clusterName: $CLUSTER_NAME
+  clusterNamespace: $CLUSTER_NAME
+  applicationManager:
+    enabled: false
+  certPolicyController:
+    enabled: true
+  policyController:
+    enabled: true
+  searchCollector:
+    enabled: true
+EOF
+----
+
+Wait for the import secret, then apply it on the managed cluster:
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+until oc get secret "${CLUSTER_NAME}-import" -n "$CLUSTER_NAME" --context hub &>/dev/null; do sleep 5; done
+
+oc get secret "${CLUSTER_NAME}-import" -n "$CLUSTER_NAME" --context hub \
+  -o jsonpath='{.data.crds\.yaml}' | base64 -d | oc apply --context "$CLUSTER_CONTEXT" -f -
+
+oc get secret "${CLUSTER_NAME}-import" -n "$CLUSTER_NAME" --context hub \
+  -o jsonpath='{.data.import\.yaml}' | base64 -d | oc apply --context "$CLUSTER_CONTEXT" -f -
+----
+
+Wait for the cluster to join:
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc wait managedcluster "$CLUSTER_NAME" \
+  --for=condition=ManagedClusterConditionAvailable \
+  --timeout=300s \
+  --context hub
+----
+
+IMPORTANT: Run all the commands in this step twice - first with `CLUSTER_NAME=cluster-a` / `CLUSTER_CONTEXT=cluster-a`, then with `CLUSTER_NAME=cluster-b` / `CLUSTER_CONTEXT=cluster-b`.
+
+.Verify: both clusters are available in ACM
+[%collapsible]
+====
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc get managedclusters --context hub
+----
+
+[.console-output]
+[source,bash]
+----
+NAME            HUB ACCEPTED   MANAGED CLUSTER URLS                    JOINED   AVAILABLE   AGE
+cluster-a       true           https://api.cluster-a.example.com:6443  True     True        2m
+cluster-b       true           https://api.cluster-b.example.com:6443  True     True        1m
+local-cluster   true           https://api.hub.example.com:6443        True     True        30m
+----
+====
+
+'''
+
+[#gitops-integration]
+=== 6. Configure ACM + GitOps integration
+
+*What:* Bind the global `ManagedClusterSet` to the `openshift-gitops` namespace and create a `GitOpsCluster` resource so managed clusters appear as Argo CD targets.
+
+*Why:* This enables the ApplicationSet push model used in xref:02-acm-workload-placement.adoc[Step 01] - ACM automatically creates Argo CD cluster secrets for each managed cluster matched by the Placement.
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+cat <<'EOF' | oc apply --context hub -f -
+apiVersion: cluster.open-cluster-management.io/v1beta2
+kind: ManagedClusterSetBinding
+metadata:
+  name: global
+  namespace: openshift-gitops
+spec:
+  clusterSet: global
+EOF
+
+cat <<'EOF' | oc apply --context hub -f -
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: all-openshift-clusters
+  namespace: openshift-gitops
+spec:
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchLabels:
+            vendor: OpenShift
+EOF
+
+cat <<'EOF' | oc apply --context hub -f -
+apiVersion: apps.open-cluster-management.io/v1beta1
+kind: GitOpsCluster
+metadata:
+  name: gitops-clusters
+  namespace: openshift-gitops
+spec:
+  argoServer:
+    cluster: local-cluster
+    argoNamespace: openshift-gitops
+  placementRef:
+    kind: Placement
+    apiVersion: cluster.open-cluster-management.io/v1beta1
+    name: all-openshift-clusters
+    namespace: openshift-gitops
+EOF
+----
+
+.Verify: Argo CD cluster secrets exist for managed clusters
+[%collapsible]
+====
+Wait a moment for ACM to generate the secrets, then check:
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc get secrets -n openshift-gitops -l argocd.argoproj.io/secret-type=cluster --context hub
+----
+
+You should see one secret per managed cluster.
+====
+
+'''
+
+[#install-service-mesh]
+=== 7. Install Service Mesh on managed clusters
+
+*What:* Install the OpenShift Service Mesh {mesh-version} operator on Cluster A and Cluster B.
+
+*Why:* xref:04-service-mesh.adoc[Step 03] uses Istio ambient mode for traffic management across clusters. The operator must be installed before creating any mesh resources.
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+for CTX in cluster-a cluster-b; do
+  cat <<'EOF' | oc apply --context "$CTX" -f -
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: servicemeshoperator3
+  namespace: openshift-operators
+spec:
+  channel: stable
+  name: servicemeshoperator3
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+  installPlanApproval: Automatic
+EOF
+done
+----
+
+.Verify: Service Mesh CSV is installed on both clusters
+[%collapsible]
+====
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc get csv -n openshift-operators --context cluster-a | grep servicemesh
+oc get csv -n openshift-operators --context cluster-b | grep servicemesh
+----
+
+Both should show a `servicemeshoperator3` CSV in `Succeeded` phase.
+====
+
+'''
+
+[#check-cidrs]
+=== 8. Check CIDR allocation (Submariner)
+
+*What:* Verify that pod and service CIDRs do not overlap across the three clusters.
+
+*Why:* xref:03-submariner-connectivity.adoc[Step 02] deploys Submariner for cross-cluster connectivity. Submariner requires non-overlapping CIDRs unless globalnet is enabled.
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+for CTX in hub cluster-a cluster-b; do
+  echo "=== $CTX ==="
+  echo "  Pod CIDR:     $(oc get network cluster -o jsonpath='{.status.clusterNetwork[0].cidr}' --context $CTX)"
+  echo "  Service CIDR: $(oc get network cluster -o jsonpath='{.status.serviceNetwork[0]}' --context $CTX)"
+done
+----
+
+WARNING: Demo platform clusters may use default CIDRs that overlap. If any CIDRs overlap, enable globalnet in the `Broker` resource (see the link:https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.11/html/networking/networking#globalnet[ACM Submariner globalnet documentation]).
+
+'''
 
 [#export-variables]
-== 1. Export workshop variables
+=== 9. Export workshop variables
 
-Fill in your values and export them. These variables are referenced by YAML files in this repo and substituted at apply time via `envsubst`.
+*What:* Set the shell variables referenced by YAML files throughout the demo.
+
+*Why:* YAML files with `$\{VARIABLE}` placeholders are piped through `envsubst` before applying. These variables must be exported in every terminal session.
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
@@ -29,7 +469,7 @@ export HUB_API_URL="https://api.hub.example.com:6443"
 export CLUSTER_A_API_URL="https://api.cluster-a.example.com:6443"
 export CLUSTER_B_API_URL="https://api.cluster-b.example.com:6443"
 export GIT_ORG="your-github-org"
-export REMOTE_INGRESS_IP="10.0.0.1"
+export REMOTE_INGRESS_IP="<set after Submariner - see step 02>"
 ----
 
 [cols="2,2,4",options="header"]
@@ -38,15 +478,15 @@ export REMOTE_INGRESS_IP="10.0.0.1"
 
 | `HUB_API_URL`
 | This page (login)
-| API server URL for the ACM Hub cluster (Azure)
+| API server URL for the ACM Hub cluster
 
 | `CLUSTER_A_API_URL`
 | This page (login)
-| API server URL for the first managed cluster (Azure)
+| API server URL for Cluster A (Azure)
 
 | `CLUSTER_B_API_URL`
 | This page (login)
-| API server URL for the second managed cluster (AWS)
+| API server URL for Cluster B (AWS)
 
 | `GIT_ORG`
 | `01-acm-workload-placement/applicationset.yaml`
@@ -57,8 +497,30 @@ export REMOTE_INGRESS_IP="10.0.0.1"
 | Ingress gateway IP of the peer cluster for cross-cluster mesh routing. With Submariner (Step 2), this can be an internal cluster IP reachable through the tunnel.
 |===
 
-[#login-clusters]
-== 2. Log in to each cluster
+TIP: If you already exported `HUB_API_URL`, `CLUSTER_A_API_URL`, and `CLUSTER_B_API_URL` in step 2, you only need to add `GIT_ORG`. `REMOTE_INGRESS_IP` is determined during the Submariner step.
+
+You are now ready to start the demo from xref:01-current-state.adoc[Step 0].
+
+'''
+
+[#option-b-quick-login]
+== Option B - Quick Login (clusters already set up)
+
+If someone else already provisioned and configured the clusters (e.g. via `setup/post-install.sh`), you only need to log in and set up contexts.
+
+=== 1. Export workshop variables
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+export HUB_API_URL="https://api.hub.example.com:6443"
+export CLUSTER_A_API_URL="https://api.cluster-a.example.com:6443"
+export CLUSTER_B_API_URL="https://api.cluster-b.example.com:6443"
+export GIT_ORG="your-github-org"
+export REMOTE_INGRESS_IP="<set after Submariner - see step 02>"
+----
+
+=== 2. Log in to each cluster
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
@@ -68,8 +530,7 @@ oc login --server=$CLUSTER_A_API_URL
 oc login --server=$CLUSTER_B_API_URL
 ----
 
-[#rename-contexts]
-== 3. Rename the contexts
+=== 3. Rename the contexts
 
 The default context names are long and auto-generated. Rename them to `hub`, `cluster-a`, and `cluster-b`:
 
@@ -83,8 +544,7 @@ oc config rename-context <CLUSTER_B_CONTEXT_NAME> cluster-b
 
 TIP: Run `oc config get-contexts` after each login to see the auto-generated context name and use it in the rename command.
 
-[#verify-contexts]
-== 4. Verify
+=== 4. Verify
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
