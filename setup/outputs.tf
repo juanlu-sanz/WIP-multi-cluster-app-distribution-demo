@@ -8,13 +8,13 @@ output "hub_api_url" {
 }
 
 output "cluster_a_api_url" {
-  value       = azurerm_redhat_openshift_cluster.cluster_a.api_server_profile[0].url
-  description = "API server URL for Cluster A (Azure)."
+  value       = rhcs_cluster_rosa_hcp.cluster_a.api_url
+  description = "API server URL for Cluster A (AWS)."
 }
 
 output "cluster_b_api_url" {
-  value       = rhcs_cluster_rosa_hcp.cluster_b.api_url
-  description = "API server URL for Cluster B (AWS)."
+  value       = azurerm_redhat_openshift_cluster.cluster_b.api_server_profile[0].url
+  description = "API server URL for Cluster B (Azure)."
 }
 
 # -----------------------------------------------------------------------------
@@ -27,12 +27,12 @@ output "hub_console_url" {
 }
 
 output "cluster_a_console_url" {
-  value       = azurerm_redhat_openshift_cluster.cluster_a.console_url
+  value       = rhcs_cluster_rosa_hcp.cluster_a.console_url
   description = "Web console URL for Cluster A."
 }
 
 output "cluster_b_console_url" {
-  value       = rhcs_cluster_rosa_hcp.cluster_b.console_url
+  value       = azurerm_redhat_openshift_cluster.cluster_b.console_url
   description = "Web console URL for Cluster B."
 }
 
@@ -50,19 +50,19 @@ output "hub_cluster_name" {
   description = "ARO cluster name for the Hub."
 }
 
-output "cluster_a_cluster_name" {
-  value       = azurerm_redhat_openshift_cluster.cluster_a.name
-  description = "ARO cluster name for Cluster A."
-}
-
 output "rosa_cluster_name" {
-  value       = rhcs_cluster_rosa_hcp.cluster_b.name
-  description = "ROSA HCP cluster name for Cluster B."
+  value       = rhcs_cluster_rosa_hcp.cluster_a.name
+  description = "ROSA HCP cluster name for Cluster A."
 }
 
 output "rosa_cluster_id" {
-  value       = rhcs_cluster_rosa_hcp.cluster_b.id
-  description = "ROSA HCP cluster ID for Cluster B."
+  value       = rhcs_cluster_rosa_hcp.cluster_a.id
+  description = "ROSA HCP cluster ID for Cluster A."
+}
+
+output "cluster_b_cluster_name" {
+  value       = azurerm_redhat_openshift_cluster.cluster_b.name
+  description = "ARO cluster name for Cluster B."
 }
 
 output "demo_name" {
@@ -78,8 +78,8 @@ output "demo_name" {
 output "workshop_exports" {
   value = <<-EOT
     export HUB_API_URL="${azurerm_redhat_openshift_cluster.hub.api_server_profile[0].url}"
-    export CLUSTER_A_API_URL="${azurerm_redhat_openshift_cluster.cluster_a.api_server_profile[0].url}"
-    export CLUSTER_B_API_URL="${rhcs_cluster_rosa_hcp.cluster_b.api_url}"
+    export CLUSTER_A_API_URL="${rhcs_cluster_rosa_hcp.cluster_a.api_url}"
+    export CLUSTER_B_API_URL="${azurerm_redhat_openshift_cluster.cluster_b.api_server_profile[0].url}"
   EOT
   description = "Paste into your terminal to set the workshop variables. REMOTE_INGRESS_IP is set by post-install.sh after Submariner is configured."
 }

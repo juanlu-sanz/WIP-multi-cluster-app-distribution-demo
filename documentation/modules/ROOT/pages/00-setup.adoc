@@ -32,12 +32,12 @@ Order the following catalog items from the demo platform:
 | Hub (ACM control plane, GitOps)
 | `hub`
 
-| ARO cluster
-| Cluster A (managed cluster - Azure)
+| ROSA HCP cluster
+| Cluster A (managed cluster - AWS)
 | `cluster-a`
 
-| ROSA HCP cluster
-| Cluster B (managed cluster - AWS)
+| ARO cluster
+| Cluster B (managed cluster - Azure)
 | `cluster-b`
 |===
 
@@ -60,13 +60,13 @@ Each cluster's credentials are displayed on the demo platform provisioning page.
 | Provided by demo platform
 | `kubeadmin` / password from provisioning page
 
-| Cluster A (ARO)
-| Provided by demo platform
-| `kubeadmin` / password from provisioning page
-
-| Cluster B (ROSA HCP)
+| Cluster A (ROSA HCP)
 | Provided by demo platform
 | `cluster-admin` / password from provisioning page
+
+| Cluster B (ARO)
+| Provided by demo platform
+| `kubeadmin` / password from provisioning page
 |===
 
 TIP: If the demo platform provides a ready-made `oc login` command, you can copy it directly and skip to the context rename in step 2.
@@ -76,11 +76,11 @@ If you need to retrieve the values manually using the CLI:
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
-# ARO clusters (Hub / Cluster A) - requires az CLI logged in
+# ARO clusters (Hub / Cluster B) - requires az CLI logged in
 az aro show --resource-group <RG> --name <CLUSTER_NAME> --query apiserverProfile.url -o tsv
 az aro list-credentials --resource-group <RG> --name <CLUSTER_NAME> --query kubeadminPassword -o tsv
 
-# ROSA HCP (Cluster B) - requires rosa CLI logged in
+# ROSA HCP (Cluster A) - requires rosa CLI logged in
 rosa describe cluster --cluster=<CLUSTER_NAME> --output json | jq -r '.api.url'
 rosa create admin --cluster=<CLUSTER_NAME> --yes
 ----
@@ -112,10 +112,10 @@ Log in and rename each context:
 oc login "$HUB_API_URL" --username kubeadmin --password <HUB_PASSWORD> --insecure-skip-tls-verify=true
 oc config rename-context "$(oc config current-context)" hub
 
-oc login "$CLUSTER_A_API_URL" --username kubeadmin --password <CLUSTER_A_PASSWORD> --insecure-skip-tls-verify=true
+oc login "$CLUSTER_A_API_URL" --username cluster-admin --password <CLUSTER_A_PASSWORD> --insecure-skip-tls-verify=true
 oc config rename-context "$(oc config current-context)" cluster-a
 
-oc login "$CLUSTER_B_API_URL" --username cluster-admin --password <CLUSTER_B_PASSWORD> --insecure-skip-tls-verify=true
+oc login "$CLUSTER_B_API_URL" --username kubeadmin --password <CLUSTER_B_PASSWORD> --insecure-skip-tls-verify=true
 oc config rename-context "$(oc config current-context)" cluster-b
 ----
 
@@ -303,6 +303,21 @@ oc wait managedcluster "$CLUSTER_NAME" \
 
 IMPORTANT: Run all the commands in this step twice - first with `CLUSTER_NAME=cluster-a` / `CLUSTER_CONTEXT=cluster-a`, then with `CLUSTER_NAME=cluster-b` / `CLUSTER_CONTEXT=cluster-b`.
 
+.Alternative: Import clusters via the ACM web console
+[%collapsible]
+====
+Instead of using the CLI, you can import managed clusters through the ACM web console:
+
+. Navigate to *Clusters > Import an existing cluster* in the ACM Hub console.
+. Fill in the *Name* (e.g. `cluster-a`), select an optional *Cluster set*, and choose the *Import mode* that lets you enter the server URL and API token.
+. Provide the *Server URL* and *API Token* for the managed cluster.
+. Click through the *Automation* and *Review* steps to complete the import.
+
+image::acm-import-cluster-web-ui.png[ACM web console - Import an existing cluster]
+
+Repeat for `cluster-b`.
+====
+
 .Verify: both clusters are available in ACM
 [%collapsible]
 ====
@@ -482,11 +497,11 @@ export REMOTE_INGRESS_IP="<set after Submariner - see step 02>"
 
 | `CLUSTER_A_API_URL`
 | This page (login)
-| API server URL for Cluster A (Azure)
+| API server URL for Cluster A (AWS)
 
 | `CLUSTER_B_API_URL`
 | This page (login)
-| API server URL for Cluster B (AWS)
+| API server URL for Cluster B (Azure)
 
 | `GIT_ORG`
 | `01-acm-workload-placement/applicationset.yaml`

@@ -8,7 +8,7 @@ data "aws_caller_identity" "current" {}
 # OIDC Configuration (managed by Red Hat)
 # -----------------------------------------------------------------------------
 
-resource "rhcs_rosa_oidc_config" "cluster_b" {
+resource "rhcs_rosa_oidc_config" "cluster_a" {
   managed = true
 }
 
@@ -49,7 +49,7 @@ resource "terraform_data" "rosa_account_roles" {
 
 resource "terraform_data" "rosa_operator_roles" {
   depends_on = [
-    rhcs_rosa_oidc_config.cluster_b,
+    rhcs_rosa_oidc_config.cluster_a,
     terraform_data.rosa_account_roles,
   ]
 
@@ -58,7 +58,7 @@ resource "terraform_data" "rosa_operator_roles" {
       rosa login --token="${var.rhcs_token}"
       rosa create operator-roles --hosted-cp \
         --prefix "${var.demo_name}" \
-        --oidc-config-id "${rhcs_rosa_oidc_config.cluster_b.id}" \
+        --oidc-config-id "${rhcs_rosa_oidc_config.cluster_a.id}" \
         --installer-role-arn "${local.rosa_installer_role_arn}" \
         --mode auto --yes
     EOT
@@ -84,13 +84,13 @@ locals {
 }
 
 # -----------------------------------------------------------------------------
-# ROSA HCP Cluster
+# ROSA HCP Cluster: Cluster A (managed cluster on AWS)
 # Pod/Service CIDRs are unique to avoid overlap with the ARO clusters
 # (required for Submariner without globalnet).
 # -----------------------------------------------------------------------------
 
-resource "rhcs_cluster_rosa_hcp" "cluster_b" {
-  name                   = "${var.demo_name}-cluster-b"
+resource "rhcs_cluster_rosa_hcp" "cluster_a" {
+  name                   = "${var.demo_name}-cluster-a"
   cloud_region           = var.aws_region
   aws_account_id         = local.rosa_account_id
   aws_billing_account_id = local.rosa_account_id
@@ -103,7 +103,7 @@ resource "rhcs_cluster_rosa_hcp" "cluster_b" {
       worker_role_arn = local.rosa_worker_role_arn
     }
     operator_role_prefix = var.demo_name
-    oidc_config_id       = rhcs_rosa_oidc_config.cluster_b.id
+    oidc_config_id       = rhcs_rosa_oidc_config.cluster_a.id
   }
 
   aws_subnet_ids     = [for s in aws_subnet.private : s.id]

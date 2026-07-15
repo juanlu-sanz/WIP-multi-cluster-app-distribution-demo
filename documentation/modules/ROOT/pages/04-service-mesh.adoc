@@ -7,7 +7,7 @@ This step adds OpenShift Service Mesh {mesh-version} (Istio ambient mode) on top
 
 * ACM Hub cluster with workload placement from xref:02-acm-workload-placement.adoc[Step 1] fully operational
 * Submariner cross-cloud connectivity from xref:03-submariner-connectivity.adoc[Step 2] verified and working
-* At least two managed clusters (`cluster-a` on Azure, `cluster-b` on AWS) joined to the Hub
+* At least two managed clusters (`cluster-a` on AWS, `cluster-b` on Azure) joined to the Hub
 * OpenShift Service Mesh {mesh-version} Operator installed on all participating clusters (Hub + managed)
 * `oc` CLI authenticated as cluster-admin on the Hub cluster
 * Contexts renamed as described in the xref:00-setup.adoc[Cluster Setup] section

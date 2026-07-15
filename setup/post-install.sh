@@ -15,8 +15,8 @@ echo "==> Reading Terraform outputs..."
 DEMO_NAME=$(terraform output -raw demo_name)
 RESOURCE_GROUP=$(terraform output -raw azure_resource_group)
 HUB_NAME=$(terraform output -raw hub_cluster_name)
-CLUSTER_A_NAME=$(terraform output -raw cluster_a_cluster_name)
 ROSA_CLUSTER_NAME=$(terraform output -raw rosa_cluster_name)
+CLUSTER_B_NAME=$(terraform output -raw cluster_b_cluster_name)
 HUB_API_URL=$(terraform output -raw hub_api_url)
 CLUSTER_A_API_URL=$(terraform output -raw cluster_a_api_url)
 CLUSTER_B_API_URL=$(terraform output -raw cluster_b_api_url)
@@ -31,9 +31,9 @@ HUB_PASSWORD=$(az aro list-credentials \
   --name "$HUB_NAME" \
   --query kubeadminPassword -o tsv)
 
-CLUSTER_A_PASSWORD=$(az aro list-credentials \
+CLUSTER_B_PASSWORD=$(az aro list-credentials \
   --resource-group "$RESOURCE_GROUP" \
-  --name "$CLUSTER_A_NAME" \
+  --name "$CLUSTER_B_NAME" \
   --query kubeadminPassword -o tsv)
 
 echo "==> Creating ROSA admin user..."
@@ -42,13 +42,13 @@ ROSA_ADMIN_OUTPUT=$(rosa create admin --cluster="$ROSA_CLUSTER_NAME" --yes 2>&1 
 if echo "$ROSA_ADMIN_OUTPUT" | grep -q "already has an admin"; then
   echo "    Admin user already exists. Retrieve password from previous creation."
   echo "    If lost, run: rosa delete admin --cluster=$ROSA_CLUSTER_NAME && rosa create admin --cluster=$ROSA_CLUSTER_NAME"
-  read -rp "    Enter Cluster B cluster-admin password: " CLUSTER_B_PASSWORD
+  read -rp "    Enter Cluster A cluster-admin password: " CLUSTER_A_PASSWORD
 else
-  CLUSTER_B_PASSWORD=$(echo "$ROSA_ADMIN_OUTPUT" | grep -oP '(?<=--password )\S+' || echo "")
-  if [[ -z "$CLUSTER_B_PASSWORD" ]]; then
+  CLUSTER_A_PASSWORD=$(echo "$ROSA_ADMIN_OUTPUT" | grep -oP '(?<=--password )\S+' || echo "")
+  if [[ -z "$CLUSTER_A_PASSWORD" ]]; then
     echo "    Could not parse ROSA admin password from output:"
     echo "$ROSA_ADMIN_OUTPUT"
-    read -rp "    Enter Cluster B cluster-admin password manually: " CLUSTER_B_PASSWORD
+    read -rp "    Enter Cluster A cluster-admin password manually: " CLUSTER_A_PASSWORD
   fi
 fi
 
@@ -65,7 +65,7 @@ oc login "$CLUSTER_A_API_URL" --username cluster-admin --password "$CLUSTER_A_PA
 CA_CTX=$(oc config current-context)
 oc config rename-context "$CA_CTX" cluster-a 2>/dev/null || true
 
-oc login "$CLUSTER_B_API_URL" --username cluster-admin --password "$CLUSTER_B_PASSWORD" --insecure-skip-tls-verify=true
+oc login "$CLUSTER_B_API_URL" --username kubeadmin --password "$CLUSTER_B_PASSWORD" --insecure-skip-tls-verify=true
 CB_CTX=$(oc config current-context)
 oc config rename-context "$CB_CTX" cluster-b 2>/dev/null || true
 
@@ -319,8 +319,8 @@ echo "==========================================================================
 echo ""
 echo "Clusters:"
 echo "  Hub (Azure):       $HUB_API_URL"
-echo "  Cluster A (Azure): $CLUSTER_A_API_URL"
-echo "  Cluster B (AWS):   $CLUSTER_B_API_URL"
+echo "  Cluster A (AWS):   $CLUSTER_A_API_URL"
+echo "  Cluster B (Azure): $CLUSTER_B_API_URL"
 echo ""
 echo "Contexts are configured as: hub, cluster-a, cluster-b"
 echo ""

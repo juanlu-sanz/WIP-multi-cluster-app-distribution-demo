@@ -43,19 +43,19 @@ resource "azurerm_subnet" "hub_worker" {
 }
 
 # -----------------------------------------------------------------------------
-# Cluster A subnets
+# Cluster B subnets
 # -----------------------------------------------------------------------------
 
-resource "azurerm_subnet" "cluster_a_master" {
-  name                                          = "${var.demo_name}-cluster-a-master"
+resource "azurerm_subnet" "cluster_b_master" {
+  name                                          = "${var.demo_name}-cluster-b-master"
   resource_group_name                           = azurerm_resource_group.demo.name
   virtual_network_name                          = azurerm_virtual_network.demo.name
   address_prefixes                              = ["10.0.4.0/23"]
   private_link_service_network_policies_enabled = false
 }
 
-resource "azurerm_subnet" "cluster_a_worker" {
-  name                 = "${var.demo_name}-cluster-a-worker"
+resource "azurerm_subnet" "cluster_b_worker" {
+  name                 = "${var.demo_name}-cluster-b-worker"
   resource_group_name  = azurerm_resource_group.demo.name
   virtual_network_name = azurerm_virtual_network.demo.name
   address_prefixes     = ["10.0.6.0/23"]

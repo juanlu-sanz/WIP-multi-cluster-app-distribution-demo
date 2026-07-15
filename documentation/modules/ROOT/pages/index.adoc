@@ -63,9 +63,9 @@ This tutorial demonstrates how to achieve seamless application mobility across m
 | OpenShift GitOps (Argo CD)
 | {gitops-version}
 
-| Hub + Cluster A
+| Hub + Cluster B
 | Azure (ARO or IPI)
 
-| Cluster B
+| Cluster A
 | AWS (ROSA or IPI)
 |===

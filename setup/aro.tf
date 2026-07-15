@@ -51,17 +51,17 @@ resource "azurerm_redhat_openshift_cluster" "hub" {
 }
 
 # -----------------------------------------------------------------------------
-# ARO Cluster: Cluster A (managed cluster on Azure)
-# Uses different pod/service CIDRs to avoid overlap with Hub and Cluster B.
+# ARO Cluster: Cluster B (managed cluster on Azure)
+# Uses different pod/service CIDRs to avoid overlap with Hub and Cluster A.
 # -----------------------------------------------------------------------------
 
-resource "azurerm_redhat_openshift_cluster" "cluster_a" {
-  name                = "${var.demo_name}-cluster-a"
+resource "azurerm_redhat_openshift_cluster" "cluster_b" {
+  name                = "${var.demo_name}-cluster-b"
   location            = azurerm_resource_group.demo.location
   resource_group_name = azurerm_resource_group.demo.name
 
   cluster_profile {
-    domain      = "${var.demo_name}-ca-${local.name_suffix}"
+    domain      = "${var.demo_name}-cb-${local.name_suffix}"
     version     = var.aro_version
     pull_secret = local.pull_secret
   }
@@ -73,14 +73,14 @@ resource "azurerm_redhat_openshift_cluster" "cluster_a" {
 
   main_profile {
     vm_size   = "Standard_D8s_v3"
-    subnet_id = azurerm_subnet.cluster_a_master.id
+    subnet_id = azurerm_subnet.cluster_b_master.id
   }
 
   worker_profile {
     vm_size      = var.aro_worker_vm_size
     disk_size_gb = 128
     node_count   = var.aro_worker_count
-    subnet_id    = azurerm_subnet.cluster_a_worker.id
+    subnet_id    = azurerm_subnet.cluster_b_worker.id
   }
 
   api_server_profile {

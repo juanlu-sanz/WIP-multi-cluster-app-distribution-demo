@@ -1,7 +1,7 @@
 = Step 2 - Submariner: Cross-Cloud Cluster Connectivity
 include::_attributes.adoc[]
 
-This step deploys Submariner via ACM to establish encrypted L3 connectivity between Cluster A (Azure) and Cluster B (AWS). Submariner creates an IPsec tunnel between the clusters, enabling pods and services to communicate across cloud providers without exposing anything to the public internet. This provides the network foundation that xref:04-service-mesh.adoc[Step 3 (Service Mesh)] builds on for cross-cluster traffic management.
+This step deploys Submariner via ACM to establish encrypted L3 connectivity between Cluster A (AWS) and Cluster B (Azure). Submariner creates an IPsec tunnel between the clusters, enabling pods and services to communicate across cloud providers without exposing anything to the public internet. This provides the network foundation that xref:04-service-mesh.adoc[Step 3 (Service Mesh)] builds on for cross-cluster traffic management.
 
 == Prerequisites
 
@@ -26,12 +26,22 @@ oc get secret cluster-b-cloud-creds -n cluster-b --context hub
 
 If either secret is missing, create it:
 
-*Cluster A (Azure):*
+*Cluster A (AWS):*
 
 [.console-input]
 [source,bash]
 ----
 oc create secret generic cluster-a-cloud-creds -n cluster-a --context hub \
+  --from-literal=aws_access_key_id="<AWS_ACCESS_KEY_ID>" \
+  --from-literal=aws_secret_access_key="<AWS_SECRET_ACCESS_KEY>"
+----
+
+*Cluster B (Azure):*
+
+[.console-input]
+[source,bash]
+----
+oc create secret generic cluster-b-cloud-creds -n cluster-b --context hub \
   --from-literal=osServicePrincipal.json='{
     "clientId": "<AZURE_CLIENT_ID>",
     "clientSecret": "<AZURE_CLIENT_SECRET>",
@@ -40,17 +50,7 @@ oc create secret generic cluster-a-cloud-creds -n cluster-a --context hub \
   }'
 ----
 
-*Cluster B (AWS):*
-
-[.console-input]
-[source,bash]
-----
-oc create secret generic cluster-b-cloud-creds -n cluster-b --context hub \
-  --from-literal=aws_access_key_id="<AWS_ACCESS_KEY_ID>" \
-  --from-literal=aws_secret_access_key="<AWS_SECRET_ACCESS_KEY>"
-----
-
-NOTE: These credentials need permission to modify NSG rules (Azure) and security group rules (AWS). The minimum required permissions are documented in the link:https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.11/html/add-ons/submariner#preparing-selected-hosts-to-deploy-submariner[Submariner cloud preparation guide].
+NOTE: These credentials need permission to modify security group rules (AWS) and NSG rules (Azure). The minimum required permissions are documented in the link:https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.11/html/add-ons/submariner#preparing-selected-hosts-to-deploy-submariner[Submariner cloud preparation guide].
 
 == Steps to Apply
 
@@ -123,7 +123,7 @@ submariner-broker   10s
 
 *What:* Create SubmarinerConfig CRs that tell ACM how to prepare each managed cluster for Submariner - including which credentials to use and how many gateway nodes to designate.
 
-*Why:* Each cloud provider needs different preparation. On Azure, Submariner opens NSG rules for IPsec traffic (UDP 4500, UDP 500). On AWS, it opens security group rules for the same ports. The SubmarinerConfig also designates worker nodes as gateway nodes, which handle the encrypted tunnel endpoints.
+*Why:* Each cloud provider needs different preparation. On AWS, Submariner opens security group rules for IPsec traffic (UDP 4500, UDP 500). On Azure, it opens NSG rules for the same ports. The SubmarinerConfig also designates worker nodes as gateway nodes, which handle the encrypted tunnel endpoints.
 
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
@@ -215,7 +215,7 @@ NAME                    HA STATUS   CONNECTIONS   AGE
 cluster-b-gateway-0     active      1             60s
 ----
 
-The `CONNECTIONS: 1` confirms the IPsec tunnel is established between Azure and AWS.
+The `CONNECTIONS: 1` confirms the IPsec tunnel is established between AWS and Azure.
 ====
 
 '''
@@ -225,7 +225,7 @@ The `CONNECTIONS: 1` confirms the IPsec tunnel is established between Azure and 
 
 *What:* Run a connectivity test from a pod on one cluster to a service on the other cluster, proving the Submariner tunnel works.
 
-*Why:* Before proceeding to Step 3 (Service Mesh), we need to confirm that the L3 tunnel is operational and that pods on Cluster A (Azure) can reach pods on Cluster B (AWS) and vice versa. This is the foundation that all cross-cluster traffic management depends on.
+*Why:* Before proceeding to Step 3 (Service Mesh), we need to confirm that the L3 tunnel is operational and that pods on Cluster A (AWS) can reach pods on Cluster B (Azure) and vice versa. This is the foundation that all cross-cluster traffic management depends on.
 
 Deploy a test pod on Cluster A and try to reach a service on Cluster B:
 
@@ -266,14 +266,14 @@ subctl show all --context cluster-a
 [source,bash]
 ----
 CLUSTER ID                    ENDPOINT IP     PUBLIC IP       CABLE DRIVER   TYPE
-cluster-a                     10.0.x.x        <azure-ip>      libreswan      local
-cluster-b                     10.1.x.x        <aws-ip>         libreswan      remote
+cluster-a                     10.1.x.x        <aws-ip>        libreswan      local
+cluster-b                     10.0.x.x        <azure-ip>       libreswan      remote
 
 GATEWAY                       CLUSTER         REMOTE IP       NAT   CABLE DRIVER   SUBNETS                    STATUS   RTT avg
-cluster-b-gateway-0           cluster-b       <aws-ip>         yes   libreswan      10.128.0.0/14, ...        connected   5.2ms
+cluster-b-gateway-0           cluster-b       <azure-ip>       yes   libreswan      10.128.0.0/14, ...        connected   5.2ms
 ----
 
-The `connected` status and RTT measurement confirm the tunnel is active between Azure and AWS.
+The `connected` status and RTT measurement confirm the tunnel is active between AWS and Azure.
 ====
 
 '''
@@ -285,7 +285,7 @@ The `connected` status and RTT measurement confirm the tunnel is active between 
 | Problem | How Submariner Solves It
 
 | No network path between clouds
-| IPsec tunnel connects Azure VNet and AWS VPC at the pod/service CIDR level
+| IPsec tunnel connects AWS VPC and Azure VNet at the pod/service CIDR level
 
 | Public IP exposure for cross-cluster traffic
 | All inter-cluster traffic flows through the encrypted tunnel - no public service endpoints needed
@@ -294,7 +294,7 @@ The `connected` status and RTT measurement confirm the tunnel is active between 
 | ACM deploys and manages Submariner as an add-on - no cloud-specific VPN setup required
 
 | Cloud firewall complexity
-| Submariner automatically opens the required NSG rules (Azure) and security group rules (AWS)
+| Submariner automatically opens the required security group rules (AWS) and NSG rules (Azure)
 
 | Multi-cluster service discovery
 | Lighthouse DNS provides `.svc.clusterset.local` names for services across clusters

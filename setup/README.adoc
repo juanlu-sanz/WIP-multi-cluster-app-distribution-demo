@@ -1,6 +1,6 @@
 = Cluster Setup (Internal - Red Hatters Only)
 
-This directory contains Terraform configuration and a post-install script to provision the full demo environment from scratch: 2 ARO clusters on Azure (Hub + Cluster A) and 1 ROSA HCP cluster on AWS (Cluster B).
+This directory contains Terraform configuration and a post-install script to provision the full demo environment from scratch: 2 ARO clusters on Azure (Hub + Cluster B) and 1 ROSA HCP cluster on AWS (Cluster A).
 
 IMPORTANT: This is not part of the demo/workshop. It is internal tooling for Red Hatters to spin up the infrastructure before running the walkthrough published at the link:https://redhat-scholars.github.io/multi-cluster-app-distribution-demo[course site].
 
@@ -11,8 +11,8 @@ IMPORTANT: This is not part of the demo/workshop. It is internal tooling for Red
 | Cluster | Platform | Cloud | Purpose
 
 | Hub | ARO | Azure | ACM control plane, GitOps
-| Cluster A | ARO | Azure | Managed cluster (same cloud as Hub)
-| Cluster B | ROSA HCP | AWS | Managed cluster (different cloud)
+| Cluster A | ROSA HCP | AWS | Managed cluster (different cloud from Hub)
+| Cluster B | ARO | Azure | Managed cluster (same cloud as Hub)
 |===
 
 == Prerequisites
@@ -92,7 +92,7 @@ terraform apply
 * 1 resource group
 * 1 VNet (10.0.0.0/16) with 4 subnets (master + worker per cluster)
 * ARO Hub cluster (pod CIDR: 10.128.0.0/14, service CIDR: 172.30.0.0/16)
-* ARO Cluster A (pod CIDR: 10.132.0.0/14, service CIDR: 172.31.0.0/16)
+* ARO Cluster B (pod CIDR: 10.132.0.0/14, service CIDR: 172.31.0.0/16)
 * Role assignments for the ARO resource provider
 
 === AWS (1 ROSA HCP cluster)
@@ -102,7 +102,7 @@ terraform apply
 * ROSA HCP account IAM roles (via `rosa` CLI)
 * ROSA HCP operator IAM roles (via `rosa` CLI)
 * OIDC configuration
-* ROSA HCP Cluster B (pod CIDR: 10.136.0.0/14, service CIDR: 172.32.0.0/16)
+* ROSA HCP Cluster A (pod CIDR: 10.136.0.0/14, service CIDR: 172.32.0.0/16)
 
 === CIDR allocation
 
@@ -113,8 +113,8 @@ Pod and service CIDRs are intentionally non-overlapping across all three cluster
 | Cluster | VNet/VPC CIDR | Pod CIDR | Service CIDR
 
 | Hub | 10.0.0.0/16 | 10.128.0.0/14 | 172.30.0.0/16
-| Cluster A | 10.0.0.0/16 | 10.132.0.0/14 | 172.31.0.0/16
-| Cluster B | 10.1.0.0/16 | 10.136.0.0/14 | 172.32.0.0/16
+| Cluster A | 10.1.0.0/16 | 10.136.0.0/14 | 172.32.0.0/16
+| Cluster B | 10.0.0.0/16 | 10.132.0.0/14 | 172.31.0.0/16
 |===
 
 == What post-install.sh Does
@@ -123,7 +123,7 @@ Pod and service CIDRs are intentionally non-overlapping across all three cluster
 . Logs in to all three clusters and renames contexts to `hub`, `cluster-a`, `cluster-b`
 . Installs ACM 2.11 operator on Hub and creates MultiClusterHub
 . Installs OpenShift GitOps on Hub
-. Imports Cluster A and Cluster B into ACM as managed clusters
+. Imports Cluster A (AWS) and Cluster B (Azure) into ACM as managed clusters
 . Configures ACM + GitOps integration (GitOpsCluster push model)
 . Installs OpenShift Service Mesh 3.0 operator on Cluster A and Cluster B
 . Prints the workshop variables ready to paste
@@ -152,8 +152,8 @@ terraform destroy
 | Resource | Approximate cost
 
 | ARO Hub (3 workers x Standard_D4s_v3) | ~$1.50/hour
-| ARO Cluster A (3 workers x Standard_D4s_v3) | ~$1.50/hour
-| ROSA HCP Cluster B (3 workers x m5.xlarge) | ~$1.50/hour
+| ARO Cluster B (3 workers x Standard_D4s_v3) | ~$1.50/hour
+| ROSA HCP Cluster A (3 workers x m5.xlarge) | ~$1.50/hour
 | NAT Gateway (AWS) | ~$0.05/hour
 | *Total* | *~$4.50-5.00/hour*
 |===

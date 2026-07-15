@@ -26,7 +26,7 @@ variable "azure_client_secret" {
 variable "azure_region" {
   type        = string
   default     = "westeurope"
-  description = "Azure region for the Hub and Cluster A."
+  description = "Azure region for the Hub and Cluster B."
 }
 
 # -----------------------------------------------------------------------------
@@ -47,7 +47,7 @@ variable "aws_secret_access_key" {
 variable "aws_region" {
   type        = string
   default     = "eu-north-1"
-  description = "AWS region for Cluster B."
+  description = "AWS region for Cluster A."
 }
 
 # -----------------------------------------------------------------------------
