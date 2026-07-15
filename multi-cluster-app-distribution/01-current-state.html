@@ -219,7 +219,7 @@ In a real-world scenario without contexts configured, teams would <code>oc login
 <div class="sect2">
 <h3 id="deploy-cluster-a"><a class="anchor" href="#deploy-cluster-a"></a>1. Deploy the sample application to Cluster A</h3>
 <div class="paragraph">
-<p><strong>What:</strong> Deploy a simple stateless HTTP application directly to a single cluster using <code>oc apply</code>.</p>
+<p><strong>What:</strong> Deploy a stateless web application (<a href="https://github.com/stefanprodan/podinfo">podinfo</a>) directly to a single cluster using <code>oc apply</code>. Podinfo displays pod name, namespace, node, and other runtime details in its web UI - making it easy to see which cluster is serving traffic.</p>
 </div>
 <div class="paragraph">
 <p><strong>Why:</strong> This represents the current workflow - each cluster is targeted individually, with no central control plane aware of where the application lives.</p>
@@ -227,7 +227,6 @@ In a real-world scenario without contexts configured, teams would <code>oc login
 <div class="listingblock console-input">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc apply -f 00-current-state/namespace.yaml --context cluster-a
-oc apply -f 00-current-state/configmap.yaml --context cluster-a
 oc apply -f 00-current-state/deployment.yaml --context cluster-a
 oc apply -f 00-current-state/service.yaml --context cluster-a
 oc apply -f 00-current-state/route.yaml --context cluster-a</code></pre>
@@ -257,14 +256,24 @@ demo-app-6d4f5b7c8-x9k2m   1/1     Running   0          30s</code></pre>
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">demo-app-demo-app.apps.cluster-a.example.com</code></pre>
 </div>
 </div>
+<div class="paragraph">
+<p>Open the route URL in a browser to see the podinfo web UI displaying the pod name, namespace, and cluster details.</p>
+</div>
 <div class="listingblock console-input">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">curl -sk https://$(oc get route demo-app -n demo-app --context cluster-a -o jsonpath='{.status.ingress[0].host}')</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">curl -sk https://$(oc get route demo-app -n demo-app --context cluster-a -o jsonpath='{.status.ingress[0].host}')/api/info</code></pre>
 </div>
 </div>
 <div class="listingblock console-output">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{"message": "Hello from demo-app", "version": "1.0.0"}</code></pre>
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">{
+  "hostname": "demo-app-6d4f5b7c8-x9k2m",
+  "version": "6.x.x",
+  "message": "demo-app (manual deployment)",
+  "goos": "linux",
+  "goarch": "amd64",
+  ...
+}</code></pre>
 </div>
 </div>
 </div>
@@ -304,7 +313,6 @@ demo-app-6d4f5b7c8-x9k2m   1/1     Running   0          30s</code></pre>
 <div class="listingblock console-input">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc apply -f 00-current-state/namespace.yaml --context cluster-b
-oc apply -f 00-current-state/configmap.yaml --context cluster-b
 oc apply -f 00-current-state/deployment.yaml --context cluster-b
 oc apply -f 00-current-state/service.yaml --context cluster-b
 oc apply -f 00-current-state/route.yaml --context cluster-b</code></pre>
@@ -366,7 +374,6 @@ The URL has changed. Any external system, load balancer, or DNS entry that point
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc delete -f 00-current-state/route.yaml --context cluster-a
 oc delete -f 00-current-state/service.yaml --context cluster-a
 oc delete -f 00-current-state/deployment.yaml --context cluster-a
-oc delete -f 00-current-state/configmap.yaml --context cluster-a
 oc delete -f 00-current-state/namespace.yaml --context cluster-a</code></pre>
 </div>
 </div>
