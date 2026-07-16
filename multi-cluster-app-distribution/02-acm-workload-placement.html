@@ -648,16 +648,28 @@ To delay automatic eviction (avoiding reaction to brief network disruptions), ad
 </div>
 </details>
 <div class="paragraph">
-<p>Now simulate a fault on the active cluster by applying the <code>unreachable</code> taint - the exact taint ACM applies automatically when a cluster goes down:</p>
+<p>Now simulate a fault on the active cluster by applying a <code>NoSelect</code> taint. This is the same effect that ACM applies automatically when a cluster becomes unreachable, but we use a custom key so the taint is not auto-removed by the registration controller:</p>
 </div>
 <div class="listingblock console-input">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc taint managedcluster cluster-b \
-  cluster.open-cluster-management.io/unreachable=:NoSelect --context hub</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc patch managedcluster cluster-b --context hub --type json \
+  -p '[{"op":"add","path":"/spec/taints","value":[{"effect":"NoSelect","key":"demo/maintenance","value":"true"}]}]'</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>The Placement does not tolerate this taint, so ACM evicts cluster-b from the PlacementDecision and selects cluster-a instead. The ApplicationSet detects the change and moves the application.</p>
+<p>The <code>demo-app-placement</code> does not tolerate this taint, so ACM evicts cluster-b from the PlacementDecision and selects cluster-a instead. The ApplicationSet detects the change and moves the application.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+The <code>all-production-clusters</code> Placement (used by GitOpsCluster) has <code>tolerations: [{operator: Exists}]</code> so it tolerates all taints. This ensures Argo CD always has cluster secrets for every cluster - including tainted ones - so it can clean up resources during failover.
+</td>
+</tr>
+</table>
 </div>
 <details>
 <summary class="title">Verify: application fails over to the healthy cluster</summary>
@@ -706,8 +718,8 @@ demo-app-6d4f5b7c8-r7t3p   1/1     Running   0          30s</code></pre>
 </div>
 <div class="listingblock console-input">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc taint managedcluster cluster-b \
-  cluster.open-cluster-management.io/unreachable- --context hub</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc patch managedcluster cluster-b --context hub --type json \
+  -p '[{"op":"remove","path":"/spec/taints"}]'</code></pre>
 </div>
 </div>
 <div class="admonitionblock important">
@@ -870,8 +882,10 @@ Removing the taint does not automatically move the application back. The Placeme
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc delete applicationset demo-app -n openshift-gitops --context hub --ignore-not-found --wait
 
-oc taint managedcluster cluster-a cluster-b \
-  cluster.open-cluster-management.io/unreachable- --context hub 2&gt;/dev/null || true
+oc patch managedcluster cluster-a --context hub --type json \
+  -p '[{"op":"remove","path":"/spec/taints"}]' 2&gt;/dev/null || true
+oc patch managedcluster cluster-b --context hub --type json \
+  -p '[{"op":"remove","path":"/spec/taints"}]' 2&gt;/dev/null || true
 
 oc delete placement demo-app-placement all-production-clusters -n openshift-gitops --context hub --ignore-not-found
 oc delete managedclustersetbinding production-clusters -n openshift-gitops --context hub --ignore-not-found
