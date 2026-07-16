@@ -69,16 +69,42 @@ Both clusters should show running pods.
 
 *Why:* Ambient mode replaces the traditional sidecar model (one envoy container per pod) with a per-node proxy. This reduces resource overhead and simplifies adoption - existing workloads join the mesh without restarting or injecting sidecars. The ztunnel handles mTLS and Layer 4 routing transparently.
 
+First, create the required namespaces on both clusters:
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc create namespace istio-system --context cluster-a
+oc create namespace istio-system --context cluster-b
+oc create namespace istio-cni --context cluster-a
+oc create namespace istio-cni --context cluster-b
+----
+
+Deploy the Istio CNI plugin (required for ambient mode to intercept traffic at the kernel level):
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc apply -f 03-service-mesh-traffic-management/istio-cni.yaml --context cluster-a
+oc apply -f 03-service-mesh-traffic-management/istio-cni.yaml --context cluster-b
+----
+
+Wait ~30 seconds for the CNI DaemonSet to become ready, then deploy the Istio control plane and the ztunnel DaemonSet:
+
 [.console-input]
 [source,bash,subs="+macros,+attributes"]
 ----
 oc apply -f 03-service-mesh-traffic-management/istio.yaml --context cluster-a
 oc apply -f 03-service-mesh-traffic-management/istio.yaml --context cluster-b
+oc apply -f 03-service-mesh-traffic-management/ztunnel.yaml --context cluster-a
+oc apply -f 03-service-mesh-traffic-management/ztunnel.yaml --context cluster-b
 ----
 
 .Verify: Istio control plane running
 [%collapsible]
 ====
+Wait 60-90 seconds for all components to reconcile.
+
 [.console-input]
 [source,bash]
 ----
@@ -88,8 +114,8 @@ oc get istio default -n istio-system --context cluster-a
 [.console-output]
 [source,bash]
 ----
-NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS   AGE
-default   1           1       1        default            Healthy  60s
+NAME      NAMESPACE      PROFILE   REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
+default   istio-system   ambient   1           1       0        default           Healthy   v1.30.1   90s
 ----
 
 [.console-input]
@@ -102,8 +128,10 @@ oc get daemonset ztunnel -n istio-system --context cluster-a
 [source,bash]
 ----
 NAME      DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   AGE
-ztunnel   3         3         3       3             3           45s
+ztunnel   2         2         2       2            2           60s
 ----
+
+NOTE: If the ztunnel pods show `0/1 Ready` with errors about `/var/run/ztunnel/ztunnel.sock` not found, restart them with `oc delete pods -n istio-system -l app=ztunnel --context cluster-a`. This can happen if the ztunnel pods started before the CNI agent was ready.
 ====
 
 '''
@@ -462,3 +490,41 @@ curl: (56) Recv failure: Connection reset by peer
 | DNS-based failover (Route53 / external DNS)
 | Simple but slow (DNS TTL propagation) and lacks fine-grained traffic control (no canary, no weighted splits).
 |===
+
+== Reset
+
+To remove all resources created in this step and return to the state before Service Mesh was configured:
+
+[.console-input]
+[source,bash]
+----
+# Remove mesh resources from both clusters
+oc delete peerauthentication demo-app-strict -n demo-app --context cluster-a --ignore-not-found
+oc delete peerauthentication demo-app-strict -n demo-app --context cluster-b --ignore-not-found
+oc delete virtualservice demo-app-routing -n demo-app --context cluster-a --ignore-not-found
+oc delete destinationrule demo-app-dr -n demo-app --context cluster-a --ignore-not-found
+oc delete serviceentry demo-app-cross-cluster -n demo-app --context cluster-a --ignore-not-found
+oc delete serviceentry demo-app-cross-cluster -n demo-app --context cluster-b --ignore-not-found
+oc delete gateway demo-app-waypoint -n demo-app --context cluster-a --ignore-not-found
+oc delete gateway demo-app-waypoint -n demo-app --context cluster-b --ignore-not-found
+
+# Remove ambient label from namespace
+oc label namespace demo-app istio.io/dataplane-mode- --context cluster-a
+oc label namespace demo-app istio.io/dataplane-mode- --context cluster-b
+
+# Remove Istio control plane, ztunnel, and CNI
+oc delete ztunnel default -n istio-system --context cluster-a --ignore-not-found
+oc delete ztunnel default -n istio-system --context cluster-b --ignore-not-found
+oc delete istio default -n istio-system --context cluster-a --ignore-not-found
+oc delete istio default -n istio-system --context cluster-b --ignore-not-found
+oc delete istiocni default --context cluster-a --ignore-not-found
+oc delete istiocni default --context cluster-b --ignore-not-found
+oc delete namespace istio-system --context cluster-a --ignore-not-found
+oc delete namespace istio-system --context cluster-b --ignore-not-found
+oc delete namespace istio-cni --context cluster-a --ignore-not-found
+oc delete namespace istio-cni --context cluster-b --ignore-not-found
+
+# Revert Placement to single cluster (Step 1 original state)
+oc patch placement demo-app-placement -n openshift-gitops --context hub --type merge \
+  -p '{"spec":{"numberOfClusters": 1, "predicates":[{"requiredClusterSelector":{"labelSelector":{"matchLabels":{"region":"west-europe"}}}}]}}'
+----
