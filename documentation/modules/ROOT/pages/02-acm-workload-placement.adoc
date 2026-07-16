@@ -371,6 +371,99 @@ NOTE: This is automatic for stateless workloads only. Stateful applications with
 
 TIP: To delay automatic eviction (avoiding reaction to brief network disruptions), add a `tolerationSeconds` field to the Placement's taint tolerations. See the link:https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.11/html/clusters/cluster_mce_overview#placement-tolerations[Placement tolerations documentation].
 
+To test this, we simulate a cluster fault by manually applying the same taint ACM would add when a cluster becomes unreachable.
+
+First, broaden the Placement selector so both clusters are candidates. After step 5 the selector targets `region: north-europe` (only cluster-b). Change it to `environment: production` so both clusters match, while keeping `numberOfClusters: 1` - one active, one standby:
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc patch placement demo-app-placement -n openshift-gitops --context hub --type merge \
+  -p '{"spec":{"predicates":[{"requiredClusterSelector":{"labelSelector":{"matchLabels":{"environment":"production"}}}}]}}'
+----
+
+.Verify: confirm which cluster currently runs the app
+[%collapsible]
+====
+[.console-input]
+[source,bash]
+----
+oc get placementdecisions -n openshift-gitops --context hub \
+  -l cluster.open-cluster-management.io/placement=demo-app-placement \
+  -o jsonpath='{range .items[*]}{.status.decisions[*].clusterName}{"\n"}{end}'
+----
+
+The output should show `cluster-b` (from step 5). The broadened selector still selects cluster-b because the Placement already has a valid decision.
+====
+
+Now simulate a fault on the active cluster by applying the `unreachable` taint - the exact taint ACM applies automatically when a cluster goes down:
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc taint managedcluster cluster-b \
+  cluster.open-cluster-management.io/unreachable=:NoSelect --context hub
+----
+
+The Placement does not tolerate this taint, so ACM evicts cluster-b from the PlacementDecision and selects cluster-a instead. The ApplicationSet detects the change and moves the application.
+
+.Verify: application fails over to the healthy cluster
+[%collapsible]
+====
+Wait up to 3 minutes for the ApplicationSet to reconcile (`requeueAfterSeconds: 180`), then check:
+
+[.console-input]
+[source,bash]
+----
+oc get placementdecisions -n openshift-gitops --context hub \
+  -l cluster.open-cluster-management.io/placement=demo-app-placement \
+  -o jsonpath='{range .items[*]}{.status.decisions[*].clusterName}{"\n"}{end}'
+----
+
+[.console-output]
+[source,bash]
+----
+cluster-a
+----
+
+[.console-input]
+[source,bash]
+----
+oc get applications.argoproj.io -n openshift-gitops --context hub | grep demo-app
+----
+
+[.console-output]
+[source,bash]
+----
+demo-app-cluster-a   Synced   Healthy
+----
+
+[.console-input]
+[source,bash]
+----
+oc get pods -n demo-app --context cluster-a
+----
+
+[.console-output]
+[source,bash]
+----
+NAME                        READY   STATUS    RESTARTS   AGE
+demo-app-6d4f5b7c8-x9k2m   1/1     Running   0          30s
+demo-app-6d4f5b7c8-r7t3p   1/1     Running   0          30s
+----
+====
+
+Finally, remove the taint to restore the cluster:
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc taint managedcluster cluster-b \
+  cluster.open-cluster-management.io/unreachable- --context hub
+----
+
+IMPORTANT: Removing the taint does not automatically move the application back. The Placement already has a valid decision (cluster-a) and will not re-evaluate unless disrupted again. This is expected behavior - it prevents unnecessary churn during recovery.
+
 '''
 
 == What This Solves (Compared to Step 0)
@@ -451,6 +544,9 @@ To return to the beginning of this step (before anything was created), run the f
 [source,bash]
 ----
 oc delete applicationset demo-app -n openshift-gitops --context hub --ignore-not-found --wait
+
+oc taint managedcluster cluster-a cluster-b \
+  cluster.open-cluster-management.io/unreachable- --context hub 2>/dev/null || true
 
 oc delete placement demo-app-placement all-production-clusters -n openshift-gitops --context hub --ignore-not-found
 oc delete managedclustersetbinding production-clusters -n openshift-gitops --context hub --ignore-not-found
