@@ -218,6 +218,17 @@ openshift-gitops-server   1/1     1            1           2m
 ----
 ====
 
+Grant the `admin` user the `role:admin` in Argo CD. By default, the Argo CD RBAC policy only grants access to the `system:cluster-admins` and `cluster-admins` groups, and the RBAC scopes only evaluate group claims. If your OpenShift `admin` user is not a member of either group (common with demo platform clusters), it will have no permissions in the Argo CD UI.
+
+The patch below adds `admin` to the RBAC policy and changes the scopes to include `email` so the SSO user's identity is matched:
+
+[.console-input]
+[source,bash,subs="+macros,+attributes"]
+----
+oc patch argocd openshift-gitops -n openshift-gitops --context hub --type merge \
+  -p '{"spec":{"rbac":{"policy":"g, system:cluster-admins, role:admin\ng, cluster-admins, role:admin\ng, admin, role:admin\n","scopes":"[groups, email]"}}}'
+----
+
 '''
 
 [#import-clusters]
