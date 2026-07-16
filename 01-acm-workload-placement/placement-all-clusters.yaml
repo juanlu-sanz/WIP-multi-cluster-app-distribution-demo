@@ -12,6 +12,8 @@ metadata:
 spec:
   clusterSets:
     - production-clusters
+  tolerations:
+    - operator: Exists
   predicates:
     - requiredClusterSelector:
         labelSelector:
