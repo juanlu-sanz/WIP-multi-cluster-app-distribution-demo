@@ -192,30 +192,39 @@ Check the gateway connection on each cluster:
 [.console-input]
 [source,bash]
 ----
-oc get gateway -n submariner-operator --context cluster-a
+oc get gateways.submariner.io -n submariner-operator --context cluster-a
 ----
 
 [.console-output]
 [source,bash]
 ----
-NAME                    HA STATUS   CONNECTIONS   AGE
-cluster-a-gateway-0     active      1             60s
+NAME           HA STATUS
+<gateway-node> active
 ----
 
 [.console-input]
 [source,bash]
 ----
-oc get gateway -n submariner-operator --context cluster-b
+oc get gateways.submariner.io -n submariner-operator --context cluster-b
 ----
 
 [.console-output]
 [source,bash]
 ----
-NAME                    HA STATUS   CONNECTIONS   AGE
-cluster-b-gateway-0     active      1             60s
+NAME           HA STATUS
+<gateway-node> active
 ----
 
-The `CONNECTIONS: 1` confirms the IPsec tunnel is established between AWS and Azure.
+Verify the connection is established:
+
+[.console-input]
+[source,bash]
+----
+oc get gateways.submariner.io -n submariner-operator --context cluster-a \
+  -o jsonpath='{range .items[*].status.connections[*]}Status: {.status} | RTT: {.latencyRTT.average}{"\n"}{end}'
+----
+
+The output should show `Status: connected` with a valid RTT, confirming the IPsec tunnel is established between AWS and Azure.
 ====
 
 '''
@@ -345,3 +354,24 @@ The `connected` status and RTT measurement confirm the tunnel is active between 
 | Skupper (Service Interconnect)
 | Application-layer connectivity (L7). Good for specific service-to-service links but does not provide the full L3 connectivity that Service Mesh needs for multi-cluster routing.
 |===
+
+== Reset
+
+To undo everything from this step and return to the state before Submariner was deployed, run the following commands. This removes the add-ons (which uninstalls Submariner from both managed clusters), the SubmarinerConfigs, the Broker, the broker namespace, and the cloud credential secrets.
+
+[.console-input]
+[source,bash]
+----
+oc delete managedclusteraddon submariner -n cluster-a --context hub --ignore-not-found
+oc delete managedclusteraddon submariner -n cluster-b --context hub --ignore-not-found
+oc wait --for=delete managedclusteraddon/submariner -n cluster-a --context hub --timeout=300s 2>/dev/null || true
+oc wait --for=delete managedclusteraddon/submariner -n cluster-b --context hub --timeout=300s 2>/dev/null || true
+oc delete submarinerconfig submariner -n cluster-a --context hub --ignore-not-found
+oc delete submarinerconfig submariner -n cluster-b --context hub --ignore-not-found
+oc delete broker submariner-broker -n production-clusters-broker --context hub --ignore-not-found
+oc delete namespace production-clusters-broker --context hub --ignore-not-found
+oc delete secret cluster-a-cloud-creds -n cluster-a --context hub --ignore-not-found
+oc delete secret cluster-b-cloud-creds -n cluster-b --context hub --ignore-not-found
+----
+
+NOTE: After deleting the ManagedClusterAddOns, ACM will uninstall the Submariner operator and all its components (gateway, route agent, Lighthouse) from the managed clusters. The `submariner-operator` namespace on each managed cluster will be removed automatically. This process may take 2-3 minutes.

@@ -15,5 +15,6 @@ spec:
   IPSecNATTPort: 4500
   NATTEnable: true
   cableDriver: libreswan
+  loadBalancerEnable: true
   credentialsSecret:
     name: cluster-a-cloud-creds
