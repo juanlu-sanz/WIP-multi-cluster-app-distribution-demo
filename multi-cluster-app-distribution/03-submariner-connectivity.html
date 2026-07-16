@@ -399,28 +399,37 @@ submariner    True        False</code></pre>
 </div>
 <div class="listingblock console-input">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get gateway -n submariner-operator --context cluster-a</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get gateways.submariner.io -n submariner-operator --context cluster-a</code></pre>
 </div>
 </div>
 <div class="listingblock console-output">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">NAME                    HA STATUS   CONNECTIONS   AGE
-cluster-a-gateway-0     active      1             60s</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">NAME           HA STATUS
+&lt;gateway-node&gt; active</code></pre>
 </div>
 </div>
 <div class="listingblock console-input">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get gateway -n submariner-operator --context cluster-b</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get gateways.submariner.io -n submariner-operator --context cluster-b</code></pre>
 </div>
 </div>
 <div class="listingblock console-output">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">NAME                    HA STATUS   CONNECTIONS   AGE
-cluster-b-gateway-0     active      1             60s</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">NAME           HA STATUS
+&lt;gateway-node&gt; active</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>The <code>CONNECTIONS: 1</code> confirms the IPsec tunnel is established between AWS and Azure.</p>
+<p>Verify the connection is established:</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc get gateways.submariner.io -n submariner-operator --context cluster-a \
+  -o jsonpath='{range .items[*].status.connections[*]}Status: {.status} | RTT: {.latencyRTT.average}{"\n"}{end}'</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The output should show <code>Status: connected</code> with a valid RTT, confirming the IPsec tunnel is established between AWS and Azure.</p>
 </div>
 </div>
 </details>
@@ -627,6 +636,40 @@ cluster-b-gateway-0           cluster-b       &lt;azure-ip&gt;       yes   libre
 </tr>
 </tbody>
 </table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_reset"><a class="anchor" href="#_reset"></a>Reset</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>To undo everything from this step and return to the state before Submariner was deployed, run the following commands. This removes the add-ons (which uninstalls Submariner from both managed clusters), the SubmarinerConfigs, the Broker, the broker namespace, and the cloud credential secrets.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">oc delete managedclusteraddon submariner -n cluster-a --context hub --ignore-not-found
+oc delete managedclusteraddon submariner -n cluster-b --context hub --ignore-not-found
+oc wait --for=delete managedclusteraddon/submariner -n cluster-a --context hub --timeout=300s 2&gt;/dev/null || true
+oc wait --for=delete managedclusteraddon/submariner -n cluster-b --context hub --timeout=300s 2&gt;/dev/null || true
+oc delete submarinerconfig submariner -n cluster-a --context hub --ignore-not-found
+oc delete submarinerconfig submariner -n cluster-b --context hub --ignore-not-found
+oc delete broker submariner-broker -n production-clusters-broker --context hub --ignore-not-found
+oc delete namespace production-clusters-broker --context hub --ignore-not-found
+oc delete secret cluster-a-cloud-creds -n cluster-a --context hub --ignore-not-found
+oc delete secret cluster-b-cloud-creds -n cluster-b --context hub --ignore-not-found</code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+After deleting the ManagedClusterAddOns, ACM will uninstall the Submariner operator and all its components (gateway, route agent, Lighthouse) from the managed clusters. The <code>submariner-operator</code> namespace on each managed cluster will be removed automatically. This process may take 2-3 minutes.
+</td>
+</tr>
+</table>
+</div>
 </div>
 </div>
 <nav class="pagination">
